@@ -29,10 +29,13 @@ class PendingUser extends Model
         'hashed_password',
         'is_admin',
         'verification_status',
+        'verification_token',
+        'verification_token_expiry',
     ];
 
     protected $hidden = [
         'hashed_password',
+        'verification_token',
     ];
 
     protected function casts(): array
@@ -40,6 +43,7 @@ class PendingUser extends Model
         return [
             'is_admin' => 'boolean',
             'created_at' => 'datetime',
+            'verification_token_expiry' => 'datetime',
         ];
     }
 }

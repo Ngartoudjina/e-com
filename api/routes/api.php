@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\ProductController;
@@ -42,5 +44,30 @@ Route::middleware('throttle:300,15')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/likes', [LikeController::class, 'index']);
         Route::post('/likes/toggle', [LikeController::class, 'toggle']);
+    });
+});
+
+/*
+| Authentification.
+|
+| Cadence resserrée, comme l'authLimiter du backend Node : ces routes sont
+| exposées au bourrinage de mots de passe et à l'énumération de comptes.
+*/
+Route::prefix('auth')->middleware('throttle:20,15')->group(function () {
+
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/verify-email', [AuthController::class, 'verifyEmail']);
+    Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/confirm-reset-password', [AuthController::class, 'confirmResetPassword']);
+
+    // Flux OAuth Google (redirection, pas d'ID token fourni par le client).
+    Route::get('/google/redirect', [GoogleAuthController::class, 'redirect']);
+    Route::get('/google/callback', [GoogleAuthController::class, 'callback']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/me', [AuthController::class, 'me']);
     });
 });

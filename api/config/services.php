@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Connexion Google via Socialite, en remplacement de la vérification
+    // d'ID token que faisait google-auth-library côté Node.
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL').'/api/auth/google/callback'),
+    ],
+
 ];
