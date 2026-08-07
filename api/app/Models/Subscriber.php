@@ -19,12 +19,14 @@ class Subscriber extends Model
     protected $fillable = [
         'email',
         'subscribed_at',
+        'opt_out',
     ];
 
     protected function casts(): array
     {
         return [
             'subscribed_at' => 'datetime',
+            'opt_out' => 'boolean',
         ];
     }
 }
