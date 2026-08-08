@@ -19,7 +19,7 @@
         étant reléguée pour ne pas repousser la grille sous la ligne de flottaison.
       -->
       <header class="grid-page mt-8 items-end lg:mt-12">
-        <h1 class="t-screen-title col-span-4 lg:t-h1 lg:col-span-7">
+        <h1 class="t-screen-title col-span-4 lg:col-span-7">
           {{ categorieActive ?? 'Toutes les pièces' }}
         </h1>
         <p data-numeric class="t-body col-span-4 mt-1 text-ink-500 lg:hidden">

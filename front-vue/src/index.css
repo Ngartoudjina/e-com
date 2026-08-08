@@ -82,6 +82,59 @@
   --size-control-sm: 36px;
   /* Cible tactile minimale imposée par la planche mobile. */
   --size-touch: 48px;
+
+  /* ==================================================================
+     COMPATIBILITÉ — À SUPPRIMER
+     ------------------------------------------------------------------
+     Les écrans pas encore repris d'après les maquettes (accueil, panier,
+     connexion, affiliation, administration) s'appuient sur les jetons de
+     l'ancien système. Les avoir retirés d'un coup rendait ces pages
+     illisibles : texte sans couleur, fonds transparents, mise en page
+     effondrée.
+     Ce bloc les remappe sur la nouvelle palette. Ces pages restent
+     stylistiquement datées, mais utilisables.
+     Chaque écran refait doit faire disparaître les usages correspondants ;
+     ce bloc part quand il n'en reste aucun.
+  ================================================================== */
+  --color-background: var(--color-paper);
+  --color-foreground: var(--color-ink-900);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-ink-900);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-ink-900);
+  --color-primary: var(--color-ink-900);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--color-rule-soft);
+  --color-secondary-foreground: var(--color-ink-900);
+  --color-muted: var(--color-rule-soft);
+  --color-muted-foreground: var(--color-ink-500);
+  --color-accent: var(--color-rule-soft);
+  --color-accent-foreground: var(--color-ink-900);
+  --color-destructive: var(--color-error);
+  --color-border: var(--color-rule);
+  --color-input: var(--color-rule);
+  --color-ring: var(--color-action);
+  --color-sidebar: var(--color-surface);
+  --color-sidebar-foreground: var(--color-ink-900);
+  --color-sidebar-primary: var(--color-ink-900);
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-accent: var(--color-rule-soft);
+  --color-sidebar-accent-foreground: var(--color-ink-900);
+  --color-sidebar-border: var(--color-rule);
+  --color-sidebar-ring: var(--color-action);
+  --color-chart-1: var(--color-action);
+  --color-chart-2: var(--color-success);
+  --color-chart-3: var(--color-warning);
+  --color-chart-4: var(--color-error);
+  --color-chart-5: var(--color-ink-500);
+
+  /* Ombres et courbes de l'ancien système, ramenées à celles du nouveau. */
+  --shadow-soft: var(--shadow-e1);
+  --shadow-lift: var(--shadow-e2);
+  --shadow-float: var(--shadow-e3);
+  --shadow-brand: var(--shadow-e2);
+  --ease-out-expo: var(--ease-exit);
+  --ease-spring: var(--ease-exit);
 }
 
 /* ==================================================================
@@ -469,12 +522,24 @@
     }
   }
 
-  /* Titre d'écran mobile — Cormorant 34. */
+  /*
+    Titre d'écran : Cormorant 34 en mobile, Titre 1 (56) au-delà.
+    La bascule est portée par la classe elle-même — un variant Tailwind
+    (`lg:t-h1`) ne peut pas s'appliquer à une classe de @layer components,
+    qui n'appartient pas au système d'utilitaires.
+  */
   .t-screen-title {
     font-family: var(--font-display);
     font-size: 34px;
     font-weight: 400;
     line-height: 1.15;
+  }
+
+  @media (min-width: 1024px) {
+    .t-screen-title {
+      font-size: 56px;
+      line-height: 1.1;
+    }
   }
 
   /* Barre d'action ancrée : « sur les écrans qui vendent, la barre
@@ -490,6 +555,83 @@
     background: var(--color-surface);
     padding: var(--spacing-3) var(--grid-margin-mobile);
     padding-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
+  }
+
+  /* ==================================================================
+     COMPATIBILITÉ — À SUPPRIMER (voir le bloc de jetons plus haut)
+     Classes utilitaires de l'ancien système encore employées par les
+     écrans non repris. Réécrites sobrement sur la nouvelle palette :
+     l'objectif est la lisibilité, pas la fidélité à l'ancien style.
+  ================================================================== */
+  .container-x {
+    width: 100%;
+    max-width: calc(var(--container-page) + 2 * var(--grid-margin));
+    margin-inline: auto;
+    padding-inline: var(--grid-margin-mobile);
+  }
+  @media (min-width: 1024px) {
+    .container-x {
+      padding-inline: var(--grid-margin);
+    }
+  }
+
+  .glass,
+  .surface {
+    background: var(--color-surface);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-2);
+  }
+
+  .surface-hover {
+    transition: box-shadow var(--duration-press) var(--ease-exit);
+  }
+  .surface-hover:hover {
+    box-shadow: var(--shadow-e2);
+  }
+
+  /* Le nouveau système interdit les dégradés décoratifs : l'ancien
+     « texte en dégradé » devient de l'encre pleine. */
+  .text-gradient {
+    color: var(--color-ink-900);
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+  }
+
+  .display-1 {
+    font-family: var(--font-display);
+    font-size: 56px;
+    font-weight: 400;
+    line-height: 1.1;
+  }
+  .display-2 {
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  /* Ornements de l'ancien système : neutralisés plutôt que reproduits. */
+  .mesh-bg::before,
+  .grain::after {
+    content: none;
+  }
+  .fade-x {
+    mask-image: none;
+  }
+  .marquee {
+    display: flex;
+    width: max-content;
+    animation: marquee 38s linear infinite;
   }
 
   /* ---- Squelette de chargement --------------------------------- */
@@ -522,6 +664,16 @@
 @keyframes skeleton-sweep {
   100% {
     transform: translateX(100%);
+  }
+}
+
+/* Compatibilité : le bandeau défilant de l'ancien accueil. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
   }
 }
 

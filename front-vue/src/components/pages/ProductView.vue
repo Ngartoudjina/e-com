@@ -35,7 +35,7 @@
             {{ produit.category || 'Collection' }}
           </p>
 
-          <h1 class="t-screen-title mt-4 lg:t-h1">{{ produit.name }}</h1>
+          <h1 class="t-screen-title mt-4">{{ produit.name }}</h1>
 
           <!-- Note et avis -->
           <div class="mt-4 flex items-center gap-3">
@@ -177,13 +177,17 @@
       <!-- Section éditoriale et caractéristiques -->
       <section class="section mt-8 border-t border-rule">
         <div class="grid-page">
-          <div class="col-span-4 lg:col-span-6">
+          <!-- Pas de second visuel : on n'affiche pas de cadre vide. -->
+          <div v-if="visuelEditorial" class="col-span-4 lg:col-span-6">
             <div class="aspect-[4/3] bg-rule-soft">
-              <img v-if="visuels[1]" :src="visuels[1]" :alt="produit.name" class="size-full object-cover" loading="lazy" />
+              <img :src="visuelEditorial" :alt="produit.name" class="size-full object-cover" loading="lazy" />
             </div>
           </div>
 
-          <div class="col-span-4 mt-8 lg:col-span-5 lg:col-start-8 lg:mt-0">
+          <div
+            class="col-span-4 mt-8 lg:col-span-5 lg:mt-0"
+            :class="visuelEditorial ? 'lg:col-start-8' : 'lg:col-start-1'"
+          >
             <p class="t-label text-ink-500">La pièce</p>
             <h2 class="t-h2 mt-4">{{ produit.name }}</h2>
             <p class="t-body-l mt-6 text-ink-700">
@@ -304,6 +308,9 @@ const note = computed(() => produit.value?.rating || 4.8)
 const nombreAvis = computed(() => 128)
 
 const visuels = computed(() => (produit.value?.mediaUrl ? [produit.value.mediaUrl] : []))
+
+/** La section éditoriale n'a de visuel que si le produit en fournit un second. */
+const visuelEditorial = computed(() => visuels.value[1] ?? null)
 
 const epuise = computed(() => (produit.value?.stock ?? 0) <= 0)
 
