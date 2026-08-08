@@ -11,6 +11,18 @@ const router = createRouter({
       component: () => import('@/components/pages/HomeView.vue'),
     },
     {
+      // Catalogue refait d'après la maquette « 02 Catalogue ».
+      path: '/catalogue',
+      name: 'catalogue',
+      component: () => import('@/components/pages/CatalogView.vue'),
+    },
+    {
+      // Fiche produit refaite d'après « 03 Fiche produit ».
+      path: '/produit/:id',
+      name: 'produit',
+      component: () => import('@/components/pages/ProductView.vue'),
+    },
+    {
       path: '/signin',
       name: 'signin',
       component: () => import('@/components/pages/AuthView.vue'),

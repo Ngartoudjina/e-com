@@ -394,18 +394,47 @@ onBeforeUnmount(() => {
 <style scoped>
 @reference "../../index.css";
 
+/* CSS simple sur les jetons du système, en attendant la refonte de cet écran
+   d'après « 02 Catalogue » et « 03 Fiche produit ». */
 .quick-action {
-  @apply flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/95 text-neutral-900
-         transition-colors hover:bg-white;
+  display: flex;
+  width: var(--size-control-md);
+  height: var(--size-control-md);
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  color: var(--color-ink-900);
+  transition: background-color var(--duration-press) var(--ease-exit);
 }
 
 .modal-btn {
-  @apply inline-flex size-9 items-center justify-center rounded-xl text-muted-foreground
-         transition-colors hover:bg-accent hover:text-accent-foreground;
+  display: inline-flex;
+  width: var(--size-control-sm);
+  height: var(--size-control-sm);
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-2);
+  color: var(--color-ink-500);
+  transition: background-color var(--duration-press) var(--ease-exit),
+    color var(--duration-press) var(--ease-exit);
+}
+.modal-btn:hover {
+  background: var(--color-rule-soft);
+  color: var(--color-ink-900);
 }
 
 .modal-action {
-  @apply inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors;
+  display: inline-flex;
+  height: var(--size-control-md);
+  align-items: center;
+  gap: var(--spacing-2);
+  padding-inline: var(--spacing-4);
+  border-radius: var(--radius-2);
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color var(--duration-press) var(--ease-exit);
 }
 
 .modal-enter-active,

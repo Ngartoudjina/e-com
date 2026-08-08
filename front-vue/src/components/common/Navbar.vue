@@ -394,14 +394,29 @@ onBeforeUnmount(() => {
 /* Tailwind v4 : chaque bloc <style> est compilé isolément, @reference lui donne accès au thème. */
 @reference "../../index.css";
 
+/* Écrit en CSS simple sur les jetons du système : ce composant sera refait
+   à partir de la maquette, ceci le garde compilable d'ici là. */
 .icon-btn {
-  @apply relative inline-flex size-10 items-center justify-center rounded-xl text-foreground/80
-         transition-all duration-200 hover:bg-accent hover:text-accent-foreground active:scale-95;
+  position: relative;
+  display: inline-flex;
+  width: var(--size-control-md);
+  height: var(--size-control-md);
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-2);
+  color: var(--color-ink-700);
+  transition: background-color var(--duration-press) var(--ease-exit),
+    color var(--duration-press) var(--ease-exit);
+}
+.icon-btn:hover {
+  background: var(--color-rule-soft);
+  color: var(--color-ink-900);
 }
 
 .pop-enter-active,
 .pop-leave-active {
-  transition: opacity 0.2s ease, transform 0.22s var(--ease-out-expo);
+  transition: opacity var(--duration-control) var(--ease-exit),
+    transform var(--duration-control) var(--ease-exit);
 }
 .pop-enter-from,
 .pop-leave-to {
