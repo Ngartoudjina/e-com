@@ -42,6 +42,12 @@ Route::middleware('throttle:300,15')->group(function () {
     Route::post('/subscribe', [NewsletterController::class, 'subscribe']);
     Route::post('/unsubscribe', [NewsletterController::class, 'unsubscribe']);
 
+    // Désabonnement en un clic depuis un e-mail. L'URL porte une signature
+    // vérifiée par le middleware `signed` : l'adresse en clair ne suffit pas.
+    Route::get('/unsubscribe', [NewsletterController::class, 'unsubscribeByLink'])
+        ->name('newsletter.unsubscribe')
+        ->middleware('signed');
+
     // ---- Favoris (authentifié) ----
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/likes', [LikeController::class, 'index']);
@@ -61,6 +67,7 @@ Route::middleware('throttle:300,15')->group(function () {
     // ---- Administration ----
     Route::middleware(['auth:sanctum', 'admin'])->group(function () {
         Route::post('/upload', [AdminController::class, 'upload']);
+        Route::post('/send-bulk-email', [AdminController::class, 'sendBulkEmail']);
 
         Route::prefix('admin')->group(function () {
             Route::get('/products', [AdminController::class, 'listProducts']);

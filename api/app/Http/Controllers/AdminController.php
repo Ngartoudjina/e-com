@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\UserResource;
+use App\Mail\BulkEmailMail;
 use App\Models\Affiliate;
 use App\Models\Product;
 use App\Models\Subscriber;
@@ -11,6 +12,7 @@ use App\Models\User;
 use App\Services\MediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 /**
  * Administration. Porté depuis back/src/controllers/admin.controller.js.
@@ -216,6 +218,46 @@ class AdminController extends Controller
                     ->pluck('total', 'category'),
             ],
             'timestamp' => now()->toIso8601String(),
+        ]);
+    }
+
+    // ---------------------------------------------------------------- newsletter
+
+    /**
+     * Diffusion à tous les abonnés.
+     *
+     * Les messages sont mis en file plutôt qu'envoyés dans la requête : le
+     * backend Node bouclait sur toute la liste en synchrone, ce qui garantissait
+     * une expiration de la requête passé quelques dizaines d'abonnés.
+     * Un worker doit tourner (`php artisan queue:work`).
+     */
+    public function sendBulkEmail(Request $request): JsonResponse
+    {
+        $donnees = $request->validate([
+            'subject' => ['required', 'string', 'max:200'],
+            'message' => ['required', 'string', 'max:20000'],
+            'imageUrl' => ['nullable', 'string', 'url'],
+        ]);
+
+        $destinataires = Subscriber::where('opt_out', false)->pluck('email');
+
+        if ($destinataires->isEmpty()) {
+            return response()->json(['error' => 'Aucun abonné disponible'], 400);
+        }
+
+        foreach ($destinataires as $email) {
+            Mail::to($email)->queue(new BulkEmailMail(
+                $donnees['subject'],
+                $donnees['message'],
+                $email,
+                $donnees['imageUrl'] ?? null,
+            ));
+        }
+
+        return response()->json([
+            'success' => true,
+            'queued' => $destinataires->count(),
+            'message' => $destinataires->count().' email(s) mis en file d\'envoi',
         ]);
     }
 
