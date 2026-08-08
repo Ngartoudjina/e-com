@@ -35,6 +35,12 @@ return [
         ],
     ],
 
+    'cloudinary' => [
+        'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+        'api_key' => env('CLOUDINARY_API_KEY'),
+        'api_secret' => env('CLOUDINARY_API_SECRET'),
+    ],
+
     // Connexion Google via Socialite, en remplacement de la vérification
     // d'ID token que faisait google-auth-library côté Node.
     'google' => [

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\LikeController;
@@ -44,6 +46,39 @@ Route::middleware('throttle:300,15')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/likes', [LikeController::class, 'index']);
         Route::post('/likes/toggle', [LikeController::class, 'toggle']);
+    });
+
+    // ---- Affiliation ----
+    // Le suivi de clic est public : il s'exécute avant toute connexion.
+    Route::post('/track-click', [AffiliateController::class, 'trackClick']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/affiliate/request', [AffiliateController::class, 'submitRequest']);
+        Route::get('/affiliate/status', [AffiliateController::class, 'status']);
+        Route::get('/affiliate/affiliate-stats', [AffiliateController::class, 'stats']);
+    });
+
+    // ---- Administration ----
+    Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+        Route::post('/upload', [AdminController::class, 'upload']);
+
+        Route::prefix('admin')->group(function () {
+            Route::get('/products', [AdminController::class, 'listProducts']);
+            Route::post('/products', [AdminController::class, 'createProduct']);
+            Route::put('/products/{id}', [AdminController::class, 'updateProduct']);
+            Route::delete('/products/{id}', [AdminController::class, 'deleteProduct']);
+
+            Route::get('/users', [AdminController::class, 'listUsers']);
+            Route::patch('/users/{uid}/role', [AdminController::class, 'updateUserRole']);
+
+            Route::get('/analytics', [AdminController::class, 'analytics']);
+        });
+
+        // Gestion des demandes d'affiliation.
+        Route::get('/affiliate/requests/{tab}', [AffiliateController::class, 'listRequests']);
+        Route::post('/affiliate/{id}/approve', [AffiliateController::class, 'approve']);
+        Route::post('/affiliate/{id}/reject', [AffiliateController::class, 'reject']);
+        Route::delete('/affiliate/{id}', [AffiliateController::class, 'destroy']);
     });
 });
 
