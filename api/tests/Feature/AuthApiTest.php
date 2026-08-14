@@ -373,4 +373,37 @@ class AuthApiTest extends TestCase
             'token' => $jeton, 'newPassword' => 'Second!2026',
         ])->assertStatus(400);
     }
+
+    /**
+     * `/auth/me` est appelée à chaque démarrage de l'application.
+     *
+     * Rangée avec `login` sous la cadence anti-bourrinage (20 par quart
+     * d'heure), elle répondait 429 après une vingtaine de rechargements — et
+     * le frontend prenait ce 429 pour un jeton expiré, effaçant la session.
+     */
+    public function test_la_route_me_n_est_pas_soumise_a_la_cadence_du_login(): void
+    {
+        $utilisateur = $this->utilisateurVerifie();
+        $jeton = $utilisateur->createToken('api')->plainTextToken;
+        $entete = ['Authorization' => 'Bearer '.$jeton];
+
+        for ($i = 0; $i < 25; $i++) {
+            $this->getJson('/api/auth/me', $entete)->assertOk();
+        }
+    }
+
+    /** La cadence resserrée doit rester en place là où elle sert. */
+    public function test_le_login_reste_limite(): void
+    {
+        $this->utilisateurVerifie();
+
+        $reponses = [];
+        for ($i = 0; $i < 25; $i++) {
+            $reponses[] = $this->postJson('/api/auth/login', [
+                'email' => 'connu@exemple.fr', 'password' => 'MauvaisMotDePasse!',
+            ])->getStatusCode();
+        }
+
+        $this->assertContains(429, $reponses, 'Le bourrinage de mot de passe n’est plus freiné.');
+    }
 }

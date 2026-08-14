@@ -68,10 +68,18 @@ export const useAuthStore = defineStore('auth', {
      * décision d'accès doit attendre cette promesse.
      */
     verification: null as Promise<void> | null,
+    /**
+     * Le serveur a confirmé le profil au cours de cette session.
+     * Faux tant que la revalidation n'a pas abouti — y compris lorsqu'elle
+     * échoue pour une raison qui ne prouve rien sur le jeton.
+     */
+    verifie: false,
   }),
 
   getters: {
     isAdmin: (state) => state.user?.isAdmin === true,
+    /** Administrateur confirmé par le serveur : seul état ouvrant l'administration. */
+    adminConfirme: (state) => state.verifie && state.user?.isAdmin === true,
     estConnecte: (state) => state.user !== null,
   },
 
@@ -98,12 +106,25 @@ export const useAuthStore = defineStore('auth', {
         try {
           const reponse = await api.get('/api/auth/me')
           this.user = reponse.data.user
+          this.verifie = true
           ecrireProfil(this.user)
-        } catch {
-          // Jeton expiré ou révoqué : on repart d'une session propre.
-          localStorage.removeItem(CLE_JETON)
-          ecrireProfil(null)
-          this.user = null
+        } catch (erreur) {
+          /*
+           * Seul un refus d'authentification invalide la session.
+           * Une coupure réseau, un 500 ou un 429 ne prouvent rien sur le
+           * jeton : les traiter comme une expiration déconnectait
+           * l'utilisateur au moindre incident, et lui faisait perdre son
+           * panier et son accès à l'administration.
+           */
+          const statut = (erreur as { response?: { status?: number } })?.response?.status
+
+          if (statut === 401 || statut === 403) {
+            localStorage.removeItem(CLE_JETON)
+            ecrireProfil(null)
+            this.user = null
+          }
+
+          this.verifie = false
         } finally {
           this.loading = false
         }
@@ -116,6 +137,8 @@ export const useAuthStore = defineStore('auth', {
       const reponse = await api.post('/api/auth/login', { email, password: motDePasse })
       localStorage.setItem(CLE_JETON, reponse.data.token)
       this.user = reponse.data.user
+      // Le serveur vient d'authentifier : le profil est confirmé.
+      this.verifie = true
       ecrireProfil(this.user)
       this.loading = false
       return this.user
@@ -149,6 +172,7 @@ export const useAuthStore = defineStore('auth', {
       ecrireProfil(null)
       this.user = null
       this.verification = null
+      this.verifie = false
     },
   },
 })

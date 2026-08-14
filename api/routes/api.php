@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AffiliateController;
+use App\Services\SettingsService;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\LikeController;
@@ -45,22 +47,7 @@ Route::middleware('throttle:300,15')->group(function () {
      * par le bandeau, le panier et le calcul de commande. Ces valeurs étaient
      * recopiées dans le frontend, sans garantie qu'elles restent d'accord.
      */
-    Route::get('/settings', function () {
-        return response()->json([
-            'currency' => config('boutique.devise'),
-            'freeShippingThreshold' => config('boutique.livraison.franco'),
-            'shippingMethods' => collect(config('boutique.livraison.modes'))
-                ->map(fn ($mode, $cle) => [
-                    'key' => $cle,
-                    'label' => $mode['libelle'],
-                    'detail' => $mode['detail'],
-                    'price' => (float) $mode['prix'],
-                ])->values(),
-            'vatRate' => config('boutique.tva'),
-            'announcements' => config('boutique.annonces'),
-            'returnDays' => config('boutique.retours.jours'),
-        ]);
-    });
+    Route::get('/settings', fn (SettingsService $reglages) => response()->json($reglages->pourLeSite()));
 
     // Prévisualisation d'un code promotionnel depuis le panier.
     Route::post('/promo/check', [OrderController::class, 'verifierPromo']);
@@ -119,6 +106,17 @@ Route::middleware('throttle:300,15')->group(function () {
 
             Route::get('/orders', [AdminController::class, 'listOrders']);
             Route::patch('/orders/{reference}/status', [AdminController::class, 'updateOrderStatus']);
+
+            // Réglages de la boutique.
+            Route::get('/settings', [AdminSettingsController::class, 'index']);
+            Route::put('/settings', [AdminSettingsController::class, 'update']);
+            Route::delete('/settings/{champ}', [AdminSettingsController::class, 'reset']);
+
+            // Codes promotionnels.
+            Route::get('/promos', [AdminSettingsController::class, 'promos']);
+            Route::post('/promos', [AdminSettingsController::class, 'creerPromo']);
+            Route::put('/promos/{id}', [AdminSettingsController::class, 'modifierPromo']);
+            Route::delete('/promos/{id}', [AdminSettingsController::class, 'supprimerPromo']);
         });
 
         // Gestion des demandes d'affiliation.
@@ -148,8 +146,18 @@ Route::prefix('auth')->middleware('throttle:20,15')->group(function () {
     Route::get('/google/redirect', [GoogleAuthController::class, 'redirect']);
     Route::get('/google/callback', [GoogleAuthController::class, 'callback']);
 
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::post('/logout', [AuthController::class, 'logout']);
-        Route::get('/me', [AuthController::class, 'me']);
-    });
+});
+
+/*
+ * Routes de session déjà authentifiées.
+ *
+ * Elles sortent de la cadence resserrée ci-dessus : celle-ci vise le
+ * bourrinage de mots de passe, or `me` et `logout` exigent un jeton valide.
+ * `me` est appelée à chaque démarrage de l'application ; sous 20 requêtes par
+ * quart d'heure, une vingtaine de rechargements suffisait à la faire répondre
+ * 429 — ce que le frontend prenait pour un jeton expiré.
+ */
+Route::prefix('auth')->middleware(['auth:sanctum', 'throttle:300,15'])->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me', [AuthController::class, 'me']);
 });

@@ -140,7 +140,7 @@ const router = createRouter({
         { path: 'clients', name: 'admin-clients', component: () => import('@/components/admin/UsersPage.vue') },
         { path: 'statistiques', name: 'admin-statistiques', component: () => import('@/components/admin/AnalyticsPage.vue') },
         { path: 'affiliation', name: 'admin-affiliation', component: () => import('@/components/admin/AffiliateRequestManager.vue') },
-        { path: 'parametres', name: 'admin-parametres', component: () => import('@/components/pages/InfoView.vue'), meta: { titre: 'Réglages', rubrique: 'Administration' } },
+        { path: 'parametres', name: 'admin-parametres', component: () => import('@/components/admin/SettingsPage.vue'), meta: { titre: 'Réglages' } },
 
         // Anciens chemins anglais de l'administration.
         { path: 'products', redirect: { name: 'admin-produits' } },
@@ -206,7 +206,13 @@ router.beforeEach(async (to) => {
       })
     }
 
-    if (!authStore.isAdmin) {
+    /*
+     * `adminConfirme` et non `isAdmin` : le profil restauré du stockage local
+     * est modifiable depuis le navigateur. Tant que le serveur n'a pas
+     * répondu, l'administration reste fermée — mais la session, elle,
+     * survit à l'incident et l'accès revient au rechargement suivant.
+     */
+    if (!authStore.adminConfirme) {
       return { name: 'acces-refuse' }
     }
   }

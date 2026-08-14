@@ -19,7 +19,10 @@ use Illuminate\Validation\ValidationException;
  */
 class OrderService
 {
-    public function __construct(private readonly PromoService $promos) {}
+    public function __construct(
+        private readonly PromoService $promos,
+        private readonly SettingsService $reglages,
+    ) {}
 
     /**
      * @param  array<int, array{productId: string, quantity: int, size?: string|null, color?: string|null}>  $lignes
@@ -142,16 +145,18 @@ class OrderService
         });
     }
 
-    /** Le franco s'apprécie sur le montant après remise. */
+    /**
+     * Le franco s'apprécie sur le montant après remise.
+     * Les valeurs viennent des réglages, modifiables depuis l'administration.
+     */
     public function fraisDePort(string $mode, float $montant): float
     {
-        $modes = config('boutique.livraison.modes');
-        $choisi = $modes[$mode] ?? $modes['standard'];
-
-        if ($montant >= (float) config('boutique.livraison.franco')) {
+        if ($montant >= (float) $this->reglages->get('freeShippingThreshold')) {
             return 0.0;
         }
 
-        return (float) $choisi['prix'];
+        return (float) $this->reglages->get(
+            $mode === 'express' ? 'shippingExpress' : 'shippingStandard'
+        );
     }
 }
