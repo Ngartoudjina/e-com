@@ -64,6 +64,13 @@ const router = createRouter({
       name: 'panier',
       component: () => import('@/components/pages/CartView.vue'),
     },
+    {
+      // Tunnel de commande refait d'après « 06 Checkout ».
+      path: '/checkout',
+      name: 'checkout',
+      component: () => import('@/components/pages/CheckoutView.vue'),
+      meta: { titre: 'Commande' },
+    },
 
     // ---- Compte ---------------------------------------------------
     {
