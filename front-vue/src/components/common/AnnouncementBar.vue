@@ -18,14 +18,21 @@
 </template>
 
 <script setup lang="ts">
-withDefaults(
-  defineProps<{ messages?: string[] }>(),
-  {
-    messages: () => [
-      'Livraison offerte dès 150 €',
-      'Retours gratuits sous 30 jours',
-      'Paiement en 3 fois',
-    ],
-  }
+/**
+ * Les messages viennent des réglages du serveur.
+ * Ils étaient écrits en dur ici, y compris « Livraison offerte dès 150 € » —
+ * un seuil qui pouvait diverger de celui réellement appliqué au panier.
+ */
+import { computed, onMounted } from 'vue'
+import { useSettingsStore } from '@/stores/settings'
+
+const settings = useSettingsStore()
+
+const messages = computed(() =>
+  settings.annonces.length
+    ? settings.annonces
+    : ['Livraison offerte dès ' + settings.franco + ' €', 'Retours gratuits sous 30 jours']
 )
+
+onMounted(() => settings.charger())
 </script>

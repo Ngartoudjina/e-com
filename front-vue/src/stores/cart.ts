@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { ProductWithDetails } from '@/types'
 
 const CLE_STOCKAGE = 'goldshop:panier'
+const CLE_PROMO = 'goldshop:promo'
 
 /**
  * Le panier est conservé dans le navigateur.
@@ -38,6 +39,9 @@ const cleLigne = (article: Pick<ProductWithDetails, 'id' | 'selectedSize' | 'sel
 export const useCartStore = defineStore('cart', {
   state: () => ({
     cartItems: lireStockage(),
+    // Le code saisi au panier suit jusqu'au tunnel ; sa validité est
+    // retranchée par le serveur, pas conservée ici.
+    codePromo: localStorage.getItem(CLE_PROMO),
   }),
 
   getters: {
@@ -91,8 +95,18 @@ export const useCartStore = defineStore('cart', {
       this.enregistrer()
     },
 
+    definirCodePromo(code: string | null) {
+      this.codePromo = code
+      try {
+        code ? localStorage.setItem(CLE_PROMO, code) : localStorage.removeItem(CLE_PROMO)
+      } catch {
+        // Stockage refusé : le code reste valable pour la session.
+      }
+    },
+
     clearCart() {
       this.cartItems = []
+      this.definirCodePromo(null)
       this.enregistrer()
     },
 

@@ -48,7 +48,7 @@ const cache = new Map<string, Entree>()
 const enVol = new Map<string, Promise<unknown>>()
 
 /** Seules les lectures du catalogue sont mises en cache. */
-const CHEMINS_CACHABLES = ['/api/products', '/api/admin/analytics']
+const CHEMINS_CACHABLES = ['/api/products', '/api/admin/analytics', '/api/settings']
 
 const estCachable = (url: string) => CHEMINS_CACHABLES.some((chemin) => url.startsWith(chemin))
 

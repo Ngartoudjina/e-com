@@ -136,8 +136,11 @@
                       <span class="t-body block text-ink-900">{{ mode.libelle }}</span>
                       <span class="t-small block text-ink-500">{{ mode.detail }}</span>
                     </span>
-                    <span class="t-body shrink-0" :class="mode.prix === 0 ? 'text-success' : 'text-ink-900'">
-                      {{ mode.prix === 0 ? 'Offerte' : formatPrix(mode.prix) }}
+                    <span
+                      class="t-body shrink-0"
+                      :class="settings.fraisDePort(mode.cle, sousTotal) === 0 ? 'text-success' : 'text-ink-900'"
+                    >
+                      {{ settings.fraisDePort(mode.cle, sousTotal) === 0 ? 'Offerte' : formatPrix(mode.prix) }}
                     </span>
                   </label>
                 </div>
@@ -319,9 +322,9 @@
                 <dd data-numeric class="t-price">{{ formatPrix(sousTotal) }}</dd>
               </div>
               <div class="flex items-baseline justify-between gap-4">
-                <dt class="t-body text-ink-700">Livraison {{ modeChoisi.libelle.toLowerCase() }}</dt>
-                <dd class="t-body" :class="modeChoisi.prix === 0 ? 'text-success' : 'text-ink-900'">
-                  {{ modeChoisi.prix === 0 ? 'Offerte' : formatPrix(modeChoisi.prix) }}
+                <dt class="t-body text-ink-700">Livraison {{ modeChoisi?.libelle?.toLowerCase() }}</dt>
+                <dd class="t-body" :class="port === 0 ? 'text-success' : 'text-ink-900'">
+                  {{ port === 0 ? 'Offerte' : formatPrix(port) }}
                 </dd>
               </div>
             </dl>
@@ -350,16 +353,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Check, Clock, RotateCcw, ShieldCheck } from 'lucide-vue-next'
 import CheckoutStepper from '@/components/checkout/CheckoutStepper.vue'
 import { formatPrix } from '@/lib/format'
 import { useCartStore } from '@/stores/cart'
+import { useSettingsStore } from '@/stores/settings'
 import { useToastStore } from '@/stores/toast'
+import { api } from '@/lib/api'
 
 const router = useRouter()
 const cartStore = useCartStore()
+const settings = useSettingsStore()
 const toastStore = useToastStore()
 
 const etapes = [
@@ -389,16 +395,25 @@ const carte = reactive({ numero: '', expiration: '', cvc: '', titulaire: '', mem
 
 const erreurs = reactive<Record<string, string>>({})
 
-const modesLivraison = [
-  { cle: 'standard', libelle: 'Standard · 2 à 3 jours', detail: 'Réception estimée sous 3 jours ouvrés', prix: 0 },
-  { cle: 'express', libelle: 'Express · demain avant 13 h', detail: 'Commande passée avant 15 h', prix: 12 },
-]
+/** Modes de livraison servis par le serveur : une seule source de vérité. */
+const modesLivraison = computed(() =>
+  settings.modes.map((mode) => ({
+    cle: mode.key,
+    libelle: mode.label,
+    detail: mode.detail,
+    prix: mode.price,
+  }))
+)
 
 const articles = computed(() => cartStore.cartItems)
 const sousTotal = computed(() => cartStore.sousTotal)
-const modeChoisi = computed(() => modesLivraison.find((m) => m.cle === livraison.mode) ?? modesLivraison[0])
-const total = computed(() => sousTotal.value + modeChoisi.value.prix)
-const tva = computed(() => total.value - total.value / 1.2)
+const modeChoisi = computed(
+  () => modesLivraison.value.find((m) => m.cle === livraison.mode) ?? modesLivraison.value[0]
+)
+
+const port = computed(() => settings.fraisDePort(livraison.mode, sousTotal.value))
+const total = computed(() => sousTotal.value + port.value)
+const tva = computed(() => total.value - total.value / (1 + settings.tauxTva))
 
 const resumes = computed(() => [
   {
@@ -417,7 +432,7 @@ const resumes = computed(() => [
   {
     etape: 1,
     libelle: 'Livraison',
-    lignes: [modeChoisi.value.libelle, modeChoisi.value.detail],
+    lignes: [modeChoisi.value?.libelle ?? '', modeChoisi.value?.detail ?? ''],
   },
 ])
 
@@ -493,13 +508,31 @@ const payer = async () => {
   envoi.value = true
   try {
     /*
-     * Aucun prestataire de paiement n'est branché : il n'y a pas d'appel
-     * réseau, et surtout aucune donnée de carte n'est transmise. La commande
-     * n'est donc pas réellement enregistrée.
+     * La commande est enregistrée côté serveur.
+     *
+     * Aucune donnée de carte n'est transmise : il n'y a toujours pas de
+     * prestataire de paiement branché. Le corps de la requête ne contient que
+     * des références, des quantités et l'adresse — les montants sont
+     * recalculés par le serveur, qui ignore ce que l'écran affichait.
      */
-    await new Promise((r) => setTimeout(r, 600))
+    const reponse = await api.post('/api/orders', {
+      items: articles.value.map((article) => ({
+        productId: article.id,
+        quantity: article.quantity,
+        size: article.selectedSize,
+        color: article.selectedColor,
+      })),
+      email: identite.email,
+      phone: identite.telephone,
+      name: `${livraison.prenom} ${livraison.nom}`.trim(),
+      address: livraison.adresse,
+      postalCode: livraison.codePostal,
+      city: livraison.ville,
+      shippingMethod: livraison.mode,
+      promoCode: cartStore.codePromo,
+    })
 
-    numeroCommande.value = `GS-${Date.now().toString().slice(-8)}`
+    numeroCommande.value = reponse.data.order.reference
 
     // La carte est effacée de la mémoire dès la validation.
     carte.numero = ''
@@ -509,9 +542,10 @@ const payer = async () => {
 
     cartStore.clearCart()
     etapeCourante.value = 3
-  } catch (e) {
+  } catch (e: any) {
     console.error(e)
-    erreurs.paiement = 'Le paiement n’a pas abouti. Réessayez.'
+    erreurs.paiement =
+      e?.response?.data?.error ?? 'La commande n’a pas pu être enregistrée. Réessayez.'
   } finally {
     envoi.value = false
   }
@@ -522,6 +556,8 @@ const externe = (fournisseur: string) =>
 
 const portefeuille = (nom: string) =>
   toastStore.info(`${nom} n’est pas encore branché.`)
+
+onMounted(() => settings.charger())
 
 // Un panier vidé ailleurs pendant le tunnel ramène au panier.
 watch(

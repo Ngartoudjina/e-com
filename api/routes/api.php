@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\NewsletterController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +37,42 @@ Route::middleware('throttle:300,15')->group(function () {
         Route::get('/simple-all', [ProductController::class, 'simpleAll']);
         Route::get('/count', [ProductController::class, 'count']);
         Route::get('/{id}', [ProductController::class, 'show']);
+    });
+
+    /*
+     * Réglages de la boutique.
+     * Seuil de franco, frais de port, annonces : une seule source, partagée
+     * par le bandeau, le panier et le calcul de commande. Ces valeurs étaient
+     * recopiées dans le frontend, sans garantie qu'elles restent d'accord.
+     */
+    Route::get('/settings', function () {
+        return response()->json([
+            'currency' => config('boutique.devise'),
+            'freeShippingThreshold' => config('boutique.livraison.franco'),
+            'shippingMethods' => collect(config('boutique.livraison.modes'))
+                ->map(fn ($mode, $cle) => [
+                    'key' => $cle,
+                    'label' => $mode['libelle'],
+                    'detail' => $mode['detail'],
+                    'price' => (float) $mode['prix'],
+                ])->values(),
+            'vatRate' => config('boutique.tva'),
+            'announcements' => config('boutique.annonces'),
+            'returnDays' => config('boutique.retours.jours'),
+        ]);
+    });
+
+    // Prévisualisation d'un code promotionnel depuis le panier.
+    Route::post('/promo/check', [OrderController::class, 'verifierPromo']);
+
+    // ---- Commandes ----
+    // La création accepte les visiteurs non connectés : le tunnel ne demande
+    // qu'un e-mail. Une commande passée connecté est rattachée au compte.
+    Route::post('/orders', [OrderController::class, 'store']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/orders', [OrderController::class, 'index']);
+        Route::get('/orders/{reference}', [OrderController::class, 'show']);
     });
 
     // ---- Newsletter ----
@@ -79,6 +116,9 @@ Route::middleware('throttle:300,15')->group(function () {
             Route::patch('/users/{uid}/role', [AdminController::class, 'updateUserRole']);
 
             Route::get('/analytics', [AdminController::class, 'analytics']);
+
+            Route::get('/orders', [AdminController::class, 'listOrders']);
+            Route::patch('/orders/{reference}/status', [AdminController::class, 'updateOrderStatus']);
         });
 
         // Gestion des demandes d'affiliation.

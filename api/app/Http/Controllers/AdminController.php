@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\OrderResource;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\UserResource;
 use App\Mail\BulkEmailMail;
 use App\Models\Affiliate;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Subscriber;
 use App\Models\User;
@@ -162,6 +164,79 @@ class AdminController extends Controller
         $this->cache->invalider();
 
         return response()->json(['success' => true, 'message' => 'Produit supprimé avec succès']);
+    }
+
+    // ---------------------------------------------------------------- commandes
+
+    /** Liste des commandes, filtrable par statut. */
+    public function listOrders(Request $request): JsonResponse
+    {
+        $statut = (string) $request->query('status', '');
+
+        $commandes = Order::with('items')
+            ->when($statut !== '', fn ($q) => $q->where('status', $statut))
+            ->latest('placed_at')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'orders' => OrderResource::collection($commandes)->resolve(),
+            'count' => $commandes->count(),
+            // Compteurs par statut, pour les onglets de filtre.
+            'byStatus' => Order::query()
+                ->selectRaw('status, count(*) as total')
+                ->groupBy('status')
+                ->pluck('total', 'status'),
+        ]);
+    }
+
+    /**
+     * Fait avancer une commande.
+     * Les transitions sont contraintes par le modèle : on n'expédie pas une
+     * commande annulée, et on ne revient pas en arrière.
+     */
+    public function updateOrderStatus(Request $request, string $reference): JsonResponse
+    {
+        $donnees = $request->validate([
+            'status' => ['required', 'string', 'in:'.implode(',', Order::STATUTS)],
+        ]);
+
+        $commande = Order::with('items')->where('reference', $reference)->first();
+
+        if (! $commande) {
+            return response()->json(['error' => 'Commande non trouvée'], 404);
+        }
+
+        $nouveau = $donnees['status'];
+
+        if ($commande->status === $nouveau) {
+            return response()->json([
+                'success' => true,
+                'order' => (new OrderResource($commande))->resolve(),
+                'message' => 'Statut inchangé',
+            ]);
+        }
+
+        if (! $commande->peutPasserA($nouveau)) {
+            return response()->json([
+                'error' => sprintf('Transition impossible : %s vers %s.', $commande->status, $nouveau),
+            ], 422);
+        }
+
+        $horodatage = match ($nouveau) {
+            'shipped' => ['shipped_at' => now()],
+            'delivered' => ['delivered_at' => now()],
+            'cancelled' => ['cancelled_at' => now()],
+            default => [],
+        };
+
+        $commande->forceFill(['status' => $nouveau] + $horodatage)->save();
+
+        return response()->json([
+            'success' => true,
+            'order' => (new OrderResource($commande->fresh('items')))->resolve(),
+            'message' => 'Statut mis à jour',
+        ]);
     }
 
     // ---------------------------------------------------------------- utilisateurs

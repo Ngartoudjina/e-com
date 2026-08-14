@@ -107,17 +107,48 @@
               </div>
             </div>
 
-            <!--
-              Aucune table de commandes n'existe côté serveur : plutôt que
-              d'afficher des commandes inventées, l'état vide dit la vérité.
-            -->
-            <div class="mt-6 border border-rule bg-surface p-12 text-center">
+            <div v-if="chargementCommandes" class="mt-6 space-y-3">
+              <div v-for="i in 3" :key="i" class="skeleton h-24" />
+            </div>
+
+            <div v-else-if="!commandesFiltrees.length" class="mt-6 border border-rule bg-surface p-12 text-center">
               <p class="t-h3">Aucune commande pour l’instant</p>
-              <p class="t-body mt-2 text-ink-500">
-                Vos commandes et leur suivi apparaîtront ici.
-              </p>
+              <p class="t-body mt-2 text-ink-500">Vos commandes et leur suivi apparaîtront ici.</p>
               <RouterLink to="/catalogue" class="btn btn-secondary mt-6">Découvrir le catalogue</RouterLink>
             </div>
+
+            <ul v-else class="mt-6 border border-rule bg-surface">
+              <li
+                v-for="(commande, index) in commandesFiltrees"
+                :key="commande.id"
+                class="flex flex-wrap items-center gap-4 p-6"
+                :class="index > 0 ? 'border-t border-rule' : ''"
+              >
+                <div class="flex -space-x-3">
+                  <span
+                    v-for="ligne in commande.items.slice(0, 3)"
+                    :key="ligne.id"
+                    class="size-12 overflow-hidden border border-surface bg-rule-soft"
+                  >
+                    <img v-if="ligne.mediaUrl" :src="ligne.mediaUrl" :alt="ligne.name" class="size-full object-cover" />
+                  </span>
+                </div>
+
+                <div class="min-w-0 flex-1">
+                  <p data-numeric class="t-body text-ink-900">#{{ commande.reference }}</p>
+                  <p class="t-small text-ink-500">
+                    {{ commande.itemCount }} article{{ commande.itemCount > 1 ? 's' : '' }} ·
+                    {{ formatDate(commande.placedAt) }}
+                  </p>
+                </div>
+
+                <p class="t-small flex shrink-0 items-center gap-2" :class="statutCommande(commande.status).classe">
+                  <span aria-hidden="true">●</span>{{ statutCommande(commande.status).libelle }}
+                </p>
+
+                <p data-numeric class="t-price shrink-0">{{ formatPrix(commande.total) }}</p>
+              </li>
+            </ul>
           </section>
 
           <!-- ---------------------------------------------- Favoris -->
@@ -253,6 +284,8 @@ import SiteFooter from '@/components/common/SiteFooter.vue'
 import BottomTabBar from '@/components/common/BottomTabBar.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { api } from '@/lib/api'
+import { formatPrix } from '@/lib/format'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -301,14 +334,85 @@ const initiale = computed(() => (prenom.value[0] ?? 'G').toUpperCase())
  */
 const membreDepuis = computed<string | null>(() => null)
 
-/** Les compteurs viendront du backend : aucun endpoint ne les fournit encore. */
-const statistiques = [
-  { libelle: 'Commandes', valeur: 0 },
+interface LigneCommande {
+  id: string
+  name: string
+  mediaUrl: string | null
+}
+
+interface Commande {
+  id: string
+  reference: string
+  status: string
+  total: number
+  itemCount: number
+  placedAt: string | null
+  items: LigneCommande[]
+}
+
+const commandes = ref<Commande[]>([])
+const chargementCommandes = ref(true)
+
+const statistiques = computed(() => [
+  { libelle: 'Commandes', valeur: commandes.value.length },
   { libelle: 'Favoris', valeur: 0 },
   { libelle: 'Retouches offertes', valeur: 0 },
-]
+])
 
-const commandeEnCours = null as null | { reference: string; statut: string; arrivee: string; etape: number }
+/** Correspondance entre le statut serveur et l'onglet de filtre. */
+const ONGLETS: Record<string, string[]> = {
+  Toutes: [],
+  'En cours': ['pending', 'paid', 'preparing', 'shipped'],
+  'Livrées': ['delivered'],
+  'Retournées': ['cancelled', 'refunded'],
+}
+
+const commandesFiltrees = computed(() => {
+  const statuts = ONGLETS[filtreCommande.value] ?? []
+  return statuts.length ? commandes.value.filter((c) => statuts.includes(c.status)) : commandes.value
+})
+
+const LIBELLES: Record<string, { libelle: string; classe: string }> = {
+  pending: { libelle: 'En attente de paiement', classe: 'text-warning' },
+  paid: { libelle: 'Payée', classe: 'text-success' },
+  preparing: { libelle: 'En préparation', classe: 'text-warning' },
+  shipped: { libelle: 'En transit', classe: 'text-warning' },
+  delivered: { libelle: 'Livrée', classe: 'text-success' },
+  cancelled: { libelle: 'Annulée', classe: 'text-ink-500' },
+  refunded: { libelle: 'Remboursée', classe: 'text-ink-500' },
+}
+
+const statutCommande = (statut: string) =>
+  LIBELLES[statut] ?? { libelle: statut, classe: 'text-ink-500' }
+
+const formatDate = (valeur: string | null) =>
+  valeur ? new Date(valeur).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'
+
+/** La commande la plus récente encore en route, mise en avant. */
+const commandeEnCours = computed(() => {
+  const active = commandes.value.find((c) => ['paid', 'preparing', 'shipped'].includes(c.status))
+  if (!active) return null
+
+  const etapes: Record<string, number> = { paid: 0, preparing: 1, shipped: 2, delivered: 2 }
+  return {
+    reference: `#${active.reference}`,
+    statut: statutCommande(active.status).libelle,
+    arrivee: active.status === 'shipped' ? 'Colis en route' : 'Commande en préparation',
+    etape: etapes[active.status] ?? 0,
+  }
+})
+
+const chargerCommandes = async () => {
+  chargementCommandes.value = true
+  try {
+    const reponse = await api.get('/api/orders')
+    commandes.value = reponse.data.orders ?? []
+  } catch (e) {
+    console.error(e)
+  } finally {
+    chargementCommandes.value = false
+  }
+}
 
 const champsProfil = computed(() => [
   { libelle: 'Prénom', valeur: utilisateur.value?.firstName },
@@ -327,6 +431,8 @@ onMounted(async () => {
   await authStore.init()
   if (!authStore.estConnecte) {
     router.replace({ name: 'connexion', query: { suite: '/compte' } })
+    return
   }
+  chargerCommandes()
 })
 </script>

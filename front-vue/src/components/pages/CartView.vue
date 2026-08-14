@@ -145,7 +145,7 @@
               <div class="flex items-baseline justify-between gap-4">
                 <dt class="t-body text-ink-700">Livraison standard</dt>
                 <dd class="t-body" :class="livraisonOfferte ? 'text-success' : 'text-ink-900'">
-                  {{ livraisonOfferte ? 'Offerte' : formatPrix(FRAIS_PORT) }}
+                  {{ livraisonOfferte ? 'Offerte' : formatPrix(port) }}
                 </dd>
               </div>
               <div class="flex items-baseline justify-between gap-4">
@@ -223,7 +223,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Check, RotateCcw, ShieldCheck, Truck, X } from 'lucide-vue-next'
 import AnnouncementBar from '@/components/common/AnnouncementBar.vue'
 import SiteHeader from '@/components/common/SiteHeader.vue'
@@ -232,13 +232,20 @@ import BottomTabBar from '@/components/common/BottomTabBar.vue'
 import QuantityStepper from '@/components/cart/QuantityStepper.vue'
 import { formatPrix, formatFractionne } from '@/lib/format'
 import { useCartStore } from '@/stores/cart'
+import { useSettingsStore } from '@/stores/settings'
+import { api } from '@/lib/api'
 import type { ProductWithDetails } from '@/types'
 
 const cartStore = useCartStore()
+const settings = useSettingsStore()
 
-/** Seuil de franco et frais de port, tels qu'annoncés par le bandeau du site. */
-const SEUIL_FRANCO = 150
-const FRAIS_PORT = 6.9
+/*
+ * Le seuil de franco et les frais de port viennent des réglages du serveur.
+ * Ils étaient écrits en dur ici et dans le bandeau d'annonces : deux valeurs
+ * indépendantes, susceptibles de diverger de ce qui était réellement facturé.
+ */
+const SEUIL_FRANCO = computed(() => settings.franco)
+const FRAIS_PORT = computed(() => settings.fraisDePort('standard', 0))
 
 const codePromo = ref('')
 const messageCode = ref<string | null>(null)
@@ -252,16 +259,19 @@ const totalLigne = (article: ProductWithDetails) => article.price * (article.qua
 
 const sousTotal = computed(() => articles.value.reduce((somme, a) => somme + totalLigne(a), 0))
 
-const livraisonOfferte = computed(() => sousTotal.value >= SEUIL_FRANCO)
-const resteAvantFranco = computed(() => Math.max(0, SEUIL_FRANCO - sousTotal.value))
-const progressionFranco = computed(() => Math.min(100, (sousTotal.value / SEUIL_FRANCO) * 100))
+const montantApresRemise = computed(() => Math.max(0, sousTotal.value - remise.value))
 
-const total = computed(() =>
-  Math.max(0, sousTotal.value - remise.value + (livraisonOfferte.value ? 0 : FRAIS_PORT))
+const port = computed(() => settings.fraisDePort('standard', montantApresRemise.value))
+const livraisonOfferte = computed(() => port.value === 0)
+const resteAvantFranco = computed(() => Math.max(0, SEUIL_FRANCO.value - montantApresRemise.value))
+const progressionFranco = computed(() =>
+  Math.min(100, (montantApresRemise.value / Math.max(1, SEUIL_FRANCO.value)) * 100)
 )
 
+const total = computed(() => montantApresRemise.value + port.value)
+
 /** Les prix sont TTC : la TVA est extraite du total, pas ajoutée. */
-const tva = computed(() => total.value - total.value / 1.2)
+const tva = computed(() => total.value - total.value / (1 + settings.tauxTva))
 
 /** Référence lisible, à défaut d'être fournie par l'API. */
 const reference = (article: ProductWithDetails) =>
@@ -277,8 +287,14 @@ const statut = (article: ProductWithDetails) => {
   return { libelle: 'En stock', classe: 'text-success' }
 }
 
-const appliquerCode = () => {
-  const code = codePromo.value.trim().toUpperCase()
+/**
+ * La validation appartient au serveur.
+ * Le code était auparavant comparé ici, en clair dans le bundle : n'importe
+ * qui pouvait le lire, et la remise n'était vérifiée par personne. La valeur
+ * affichée n'est qu'une prévisualisation, recalculée à la commande.
+ */
+const appliquerCode = async () => {
+  const code = codePromo.value.trim()
 
   if (!code) {
     codeValide.value = false
@@ -286,16 +302,19 @@ const appliquerCode = () => {
     return
   }
 
-  // Faute d'endpoint dédié, un seul code de démonstration est reconnu.
-  if (code === 'ARCHIVES20') {
-    remise.value = sousTotal.value * 0.2
+  try {
+    const reponse = await api.post('/api/promo/check', { code, subtotal: sousTotal.value })
+    remise.value = reponse.data.remise ?? 0
     codeValide.value = true
-    messageCode.value = 'ARCHIVES20 appliqué — 20 % sur les archives'
-    return
+    messageCode.value = reponse.data.message
+    cartStore.definirCodePromo(code)
+  } catch (e: any) {
+    remise.value = 0
+    codeValide.value = false
+    messageCode.value = e?.response?.data?.message ?? 'Ce code n’est pas valide.'
+    cartStore.definirCodePromo(null)
   }
-
-  remise.value = 0
-  codeValide.value = false
-  messageCode.value = 'Ce code n’est pas valide.'
 }
+
+onMounted(() => settings.charger())
 </script>
