@@ -68,14 +68,14 @@
             <div class="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
               <div class="flex items-center gap-3">
                 <Avatar class="h-11 w-11 ring-2 ring-white">
-                  <AvatarImage :src="authStore.user?.photoURL || ''" />
+                  <AvatarImage :src="authStore.user?.photoUrl || ''" />
                   <AvatarFallback class="bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-bold text-white">
                     {{ initials }}
                   </AvatarFallback>
                 </Avatar>
                 <div class="min-w-0 flex-1">
                   <p class="truncate text-sm font-semibold text-slate-800">
-                    {{ authStore.user?.displayName || 'Utilisateur' }}
+                    {{ authStore.user?.name || 'Utilisateur' }}
                   </p>
                   <p class="truncate text-xs text-slate-500">
                     {{ authStore.user?.email }}
@@ -144,12 +144,10 @@
 <script setup lang="ts">
 import { computed, markRaw, onMounted, ref, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { signOut } from 'firebase/auth'
 import { Home, Package, ShoppingCart, Users, BarChart3, Handshake, Menu, X, Bell, Search, LogOut } from 'lucide-vue-next'
 import { cn } from '@/lib/utils'
 import { Badge, Avatar, AvatarImage, AvatarFallback } from '@/components/ui/index'
 import { useAuthStore } from '@/stores/auth'
-import { auth } from '@/lib/firebaseConfig'
 import { useToastStore } from '@/stores/toast'
 
 interface SidebarItem {
@@ -180,7 +178,7 @@ onMounted(() => {
 })
 
 const initials = computed(() => {
-  const name = authStore.user?.displayName
+  const name = authStore.user?.name
   if (name) return name.charAt(0)
   const email = authStore.user?.email
   return email ? email.charAt(0).toUpperCase() : 'U'
@@ -204,7 +202,8 @@ const handleNavigation = (path: string) => {
 }
 
 const handleLogout = async () => {
-  await signOut(auth)
+  // Déconnexion Sanctum : révoque le jeton côté serveur puis vide la session.
+  await authStore.deconnexion()
   localStorage.removeItem('token')
   toastStore.success('Déconnexion réussie')
   router.push('/connexion')

@@ -77,13 +77,21 @@ const router = createRouter({
       path: '/connexion',
       name: 'connexion',
       component: () => import('@/components/pages/AuthView.vue'),
+      meta: { titre: 'Connexion' },
     },
     {
-      // L'espace client de « 08 Espace client » n'est pas encore construit :
-      // le lien mène à l'authentification en attendant.
+      // Même écran, ouvert directement sur le formulaire de création.
+      path: '/inscription',
+      name: 'inscription',
+      component: () => import('@/components/pages/AuthView.vue'),
+      meta: { titre: 'Créer un compte' },
+    },
+    {
+      // Espace client refait d'après « 08 Espace client ».
       path: '/compte',
       name: 'compte',
-      component: () => import('@/components/pages/AuthView.vue'),
+      component: () => import('@/components/pages/AccountView.vue'),
+      meta: { titre: 'Mon compte' },
     },
     {
       path: '/verification-email',
