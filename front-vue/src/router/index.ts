@@ -139,6 +139,7 @@ const router = createRouter({
         { path: 'clients', name: 'admin-clients', component: () => import('@/components/admin/UsersPage.vue') },
         { path: 'statistiques', name: 'admin-statistiques', component: () => import('@/components/admin/AnalyticsPage.vue') },
         { path: 'affiliation', name: 'admin-affiliation', component: () => import('@/components/admin/AffiliateRequestManager.vue') },
+        { path: 'parametres', name: 'admin-parametres', component: () => import('@/components/pages/InfoView.vue'), meta: { titre: 'Réglages', rubrique: 'Administration' } },
 
         // Anciens chemins anglais de l'administration.
         { path: 'products', redirect: { name: 'admin-produits' } },

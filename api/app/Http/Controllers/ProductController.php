@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\CatalogueCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -14,6 +15,8 @@ use Illuminate\Validation\Rule;
  */
 class ProductController extends Controller
 {
+    public function __construct(private readonly CatalogueCache $cache) {}
+
     /** Champs de tri autorisés, exprimés côté API en camelCase. */
     private const TRIS = [
         'createdAt' => 'created_at',
@@ -57,6 +60,15 @@ class ProductController extends Controller
         $categorie = trim((string) $request->query('category', ''));
         $recherche = trim((string) $request->query('search', ''));
 
+        $parametres = [
+            'page' => $page, 'limit' => $limite, 'all' => $tout,
+            'category' => $categorie, 'search' => $recherche,
+            'sortBy' => $sortBy, 'order' => $order,
+        ];
+
+        return response()->json($this->cache->memoriser('index', $parametres, function () use (
+            $categorie, $recherche, $sortBy, $order, $tout, $limite, $page
+        ) {
         $requete = Product::query()
             ->when($categorie !== '', function ($q) use ($categorie) {
                 $categories = array_values(array_filter(array_map('trim', explode(',', $categorie))));
@@ -76,7 +88,7 @@ class ProductController extends Controller
 
         $pages = $limite > 0 ? (int) ceil($total / $limite) : 1;
 
-        return response()->json([
+        return [
             'products' => ProductResource::collection($lignes)->resolve(),
             'pagination' => $tout
                 ? [
@@ -105,7 +117,8 @@ class ProductController extends Controller
                 'retrievedAll' => $tout,
                 'count' => $lignes->count(),
             ],
-        ]);
+        ];
+        }));
     }
 
     public function show(string $id): JsonResponse
@@ -121,14 +134,16 @@ class ProductController extends Controller
 
     public function simpleAll(): JsonResponse
     {
-        $lignes = Product::all();
+        return response()->json($this->cache->memoriser('simple-all', [], function () {
+            $lignes = Product::all();
 
-        return response()->json([
-            'success' => true,
-            'products' => ProductResource::collection($lignes)->resolve(),
-            'count' => $lignes->count(),
-            'timestamp' => now()->toIso8601String(),
-        ]);
+            return [
+                'success' => true,
+                'products' => ProductResource::collection($lignes)->resolve(),
+                'count' => $lignes->count(),
+                'timestamp' => now()->toIso8601String(),
+            ];
+        }));
     }
 
     public function count(Request $request): JsonResponse
@@ -136,17 +151,23 @@ class ProductController extends Controller
         $categorie = trim((string) $request->query('category', ''));
         $recherche = trim((string) $request->query('search', ''));
 
-        $total = Product::query()
-            ->when($categorie !== '', fn ($q) => $q->where('category', $categorie))
-            ->when($recherche !== '', fn ($q) => $q->where('name', 'like', $this->echapper($recherche).'%'))
-            ->count();
+        return response()->json($this->cache->memoriser(
+            'count',
+            ['category' => $categorie, 'search' => $recherche],
+            function () use ($categorie, $recherche) {
+                $total = Product::query()
+                    ->when($categorie !== '', fn ($q) => $q->where('category', $categorie))
+                    ->when($recherche !== '', fn ($q) => $q->where('name', 'like', $this->echapper($recherche).'%'))
+                    ->count();
 
-        return response()->json([
-            'success' => true,
-            'count' => $total,
-            'filters' => ['category' => $categorie, 'search' => $recherche],
-            'timestamp' => now()->toIso8601String(),
-        ]);
+                return [
+                    'success' => true,
+                    'count' => $total,
+                    'filters' => ['category' => $categorie, 'search' => $recherche],
+                    'timestamp' => now()->toIso8601String(),
+                ];
+            }
+        ));
     }
 
     /** Neutralise les jokers LIKE saisis par l'utilisateur. */

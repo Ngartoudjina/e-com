@@ -1,178 +1,318 @@
 <template>
-  <div class="relative overflow-hidden">
-    <div class="pointer-events-none absolute inset-0 overflow-hidden">
-      <div class="absolute -left-16 top-0 h-52 w-52 rounded-full bg-indigo-400/10 blur-3xl" />
-      <div class="absolute -right-10 top-20 h-64 w-64 rounded-full bg-fuchsia-400/10 blur-3xl" />
-      <div class="absolute bottom-0 left-1/3 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
+  <div>
+    <!-- Indicateurs clés -->
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <article v-for="indicateur in indicateurs" :key="indicateur.libelle" class="border border-rule bg-surface p-6">
+        <div class="flex items-baseline justify-between gap-4">
+          <h2 class="t-label text-ink-500">{{ indicateur.libelle }}</h2>
+          <p v-if="indicateur.variation !== null" class="t-small" :class="indicateur.variation >= 0 ? 'text-success' : 'text-error'">
+            {{ indicateur.variation >= 0 ? '+' : '' }}{{ indicateur.variation }} {{ indicateur.unite }}
+          </p>
+        </div>
+        <p data-numeric class="mt-5 font-display text-[34px] leading-none">{{ indicateur.affichage }}</p>
+
+        <!-- Une seule couleur d'accent dans les graphiques : le bleu d'action. -->
+        <div class="mt-6 flex h-8 items-end gap-1.5">
+          <span
+            v-for="(hauteur, index) in indicateur.serie"
+            :key="index"
+            class="flex-1"
+            :class="index === indicateur.serie.length - 1 ? 'bg-action' : 'bg-action/15'"
+            :style="{ height: `${Math.max(12, hauteur)}%` }"
+            data-barre
+          />
+        </div>
+      </article>
     </div>
 
-    <div class="relative z-10 space-y-6">
-      <header class="rounded-[28px] border border-slate-200/80 bg-white/75 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-xl sm:p-6">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="mt-4 grid gap-4 xl:grid-cols-[1.6fr_1fr]">
+      <!-- Courbe -->
+      <section class="border border-rule bg-surface p-6 lg:p-8">
+        <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div class="mb-2 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-indigo-700">
-              <Activity class="h-3.5 w-3.5" />
-              Overview
-            </div>
-            <h2 class="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-              Tableau de bord
-            </h2>
-            <p class="mt-1 text-sm text-slate-600">Aperçu de votre activité en temps réel</p>
+            <h2 class="t-h3">Répartition du catalogue</h2>
+            <p class="t-small mt-1 text-ink-500">Nombre de pièces par catégorie</p>
           </div>
-
-          <button
-            type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
-          >
-            <Eye class="h-4 w-4" />
-            Voir tout
-            <ArrowUpRight class="h-4 w-4" />
-          </button>
         </div>
-      </header>
 
-      <section class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <article
-          v-for="(stat, index) in stats"
-          :key="stat.title"
-          class="group relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-white/80 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(15,23,42,0.08)]"
-        >
-          <div class="absolute right-4 top-4 h-12 w-12 rounded-full opacity-20 blur-xl" :class="stat.glow" />
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-sm font-medium text-slate-500">{{ stat.title }}</p>
-              <p class="mt-4 text-3xl font-black tracking-tight text-slate-900" :class="{ 'animate-pulse': animatingStats }">
-                {{ stat.value }}
-              </p>
-            </div>
-            <div class="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/50 shadow-sm" :class="stat.bgColor">
-              <component :is="stat.icon" class="h-5 w-5" :class="stat.textColor" />
-            </div>
-          </div>
+        <div v-if="chargement" class="mt-8 space-y-3">
+          <div v-for="i in 5" :key="i" class="skeleton h-8" />
+        </div>
 
-          <div class="mt-5 flex items-center gap-2 rounded-xl bg-slate-50 px-2.5 py-2">
-            <TrendingUp class="h-3.5 w-3.5 text-emerald-500" />
-            <p class="text-xs font-medium text-slate-600">{{ stat.change }}</p>
-          </div>
-        </article>
+        <div v-else-if="!categories.length" class="mt-8 text-center">
+          <p class="t-body text-ink-500">Aucun produit au catalogue.</p>
+        </div>
+
+        <!--
+          Barres horizontales plutôt qu'une courbe : les données réellement
+          disponibles sont une répartition par catégorie, pas une série
+          temporelle. Le backend n'expose aucun historique de chiffre d'affaires.
+        -->
+        <ul v-else class="mt-8 space-y-5">
+          <li v-for="categorie in categories" :key="categorie.nom">
+            <div class="flex items-baseline justify-between gap-4">
+              <span class="t-body text-ink-900">{{ categorie.nom }}</span>
+              <span data-numeric class="t-small text-ink-500">{{ categorie.total }}</span>
+            </div>
+            <div class="mt-2 h-2 bg-rule-soft">
+              <div class="h-2 bg-action transition-all duration-[320ms]" :style="{ width: `${categorie.part}%` }" />
+            </div>
+          </li>
+        </ul>
       </section>
 
-      <section class="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/80 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-xl">
-        <div class="border-b border-slate-200/80 bg-gradient-to-r from-slate-50 via-white to-indigo-50/60 px-5 py-4 sm:px-6">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <h3 class="flex items-center gap-2 text-lg font-bold text-slate-900">
-                <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
-                  <Activity class="h-4 w-4" />
-                </span>
-                Activité récente
-              </h3>
-              <p class="mt-1 text-sm text-slate-500">Dernières actions et événements du magasin</p>
+      <!-- Entonnoir de stock -->
+      <section class="border border-rule bg-surface p-6 lg:p-8">
+        <h2 class="t-h3">État du stock</h2>
+        <p class="t-small mt-1 text-ink-500">Sur l’ensemble du catalogue</p>
+
+        <ul class="mt-8 space-y-6">
+          <li v-for="palier in paliersStock" :key="palier.libelle">
+            <div class="flex items-baseline justify-between gap-4">
+              <span class="t-body text-ink-900">{{ palier.libelle }}</span>
+              <span data-numeric class="t-body text-ink-900">{{ palier.valeur }}</span>
             </div>
-          </div>
-        </div>
-
-        <div class="divide-y divide-slate-200/80">
-          <div
-            v-for="activity in recentActivities"
-            :key="activity.id"
-            class="group px-5 py-4 transition-colors hover:bg-slate-50/80 sm:px-6"
-          >
-            <div class="flex items-center gap-4">
-              <div class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 group-hover:bg-indigo-50">
-                <div class="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full" :class="activity.color" />
-                <component :is="activity.icon" class="h-4 w-4 text-slate-600 group-hover:text-indigo-600" />
-              </div>
-
-              <div class="min-w-0 flex-1">
-                <p class="text-sm font-semibold text-slate-800 group-hover:text-indigo-600">{{ activity.title }}</p>
-                <div class="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                  <Clock class="h-3 w-3" />
-                  {{ activity.time }}
-                </div>
-              </div>
-
-              <Badge :class="activity.badgeClass">{{ activity.value }}</Badge>
+            <div class="mt-2 h-2 bg-rule-soft">
+              <div class="h-2 bg-ink-900" :style="{ width: `${palier.part}%` }" />
             </div>
-          </div>
-        </div>
+          </li>
+        </ul>
+
+        <p v-if="rupture > 0" class="t-small mt-8 bg-[#F5E6C8] p-4 text-warning">
+          {{ rupture }} pièce{{ rupture > 1 ? 's' : '' }} en rupture. Elles restent visibles au catalogue
+          avec une alerte de réassort.
+        </p>
       </section>
     </div>
+
+    <div class="mt-4 grid gap-4 xl:grid-cols-2">
+      <!-- Meilleures ventes -->
+      <section class="border border-rule bg-surface">
+        <div class="flex items-baseline justify-between gap-4 border-b border-rule p-6">
+          <h2 class="t-h3">Meilleures ventes</h2>
+          <RouterLink to="/admin/produits" class="t-small text-action hover:underline">Tout voir</RouterLink>
+        </div>
+
+        <div v-if="chargement" class="space-y-3 p-6">
+          <div v-for="i in 4" :key="i" class="skeleton h-11" />
+        </div>
+
+        <p v-else-if="!meilleuresVentes.length" class="t-body p-6 text-ink-500">
+          Aucune vente enregistrée.
+        </p>
+
+        <ul v-else>
+          <li
+            v-for="(produit, index) in meilleuresVentes"
+            :key="produit.id"
+            class="flex items-center gap-4 px-6 py-4"
+            :class="index > 0 ? 'border-t border-rule' : ''"
+          >
+            <span class="size-11 shrink-0 overflow-hidden bg-rule-soft">
+              <img v-if="produit.mediaUrl" :src="produit.mediaUrl" :alt="produit.name" class="size-full object-cover" />
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-[13px] text-ink-900">{{ produit.name }}</span>
+              <span data-numeric class="block text-[11px] text-ink-500">
+                {{ produit.soldCount ?? 0 }} vendus · stock {{ produit.stock ?? 0 }}
+              </span>
+            </span>
+            <span data-numeric class="shrink-0 text-[13px]">{{ formatPrix(produit.price) }}</span>
+          </li>
+        </ul>
+      </section>
+
+      <!-- À traiter -->
+      <section class="border border-rule bg-surface">
+        <div class="flex items-baseline justify-between gap-4 border-b border-rule p-6">
+          <h2 class="t-h3">À traiter</h2>
+          <span data-numeric class="t-small text-ink-500">{{ aTraiter.length }} point{{ aTraiter.length > 1 ? 's' : '' }}</span>
+        </div>
+
+        <p v-if="!aTraiter.length" class="t-body p-6 text-ink-500">Rien à signaler.</p>
+
+        <ul v-else>
+          <li
+            v-for="(point, index) in aTraiter"
+            :key="point.libelle"
+            class="flex items-center gap-4 px-6 py-4"
+            :class="index > 0 ? 'border-t border-rule' : ''"
+          >
+            <span class="size-2 shrink-0 rounded-full" :class="point.couleur" />
+            <span class="min-w-0 flex-1">
+              <span class="block text-[13px] text-ink-900">{{ point.libelle }}</span>
+              <span class="block text-[11px] text-ink-500">{{ point.detail }}</span>
+            </span>
+            <RouterLink :to="point.to" class="btn btn-sm btn-secondary shrink-0">{{ point.action }}</RouterLink>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <p class="t-small mt-8 text-ink-500">
+      Le chiffre d’affaires, les commandes et le taux de conversion ne sont pas affichés :
+      aucune table de commandes n’existe encore côté serveur. Les indicateurs ci-dessus
+      proviennent tous de données réelles.
+    </p>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
-import { Package, ShoppingCart, Users, BarChart3, TrendingUp, DollarSign, Eye, ArrowUpRight, Clock, Activity } from 'lucide-vue-next'
-import { Badge } from '@/components/ui/index'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { getCache } from '@/lib/api'
+import { formatPrix } from '@/lib/format'
+import { COURBE, DUREE, gsap, mouvementReduit } from '@/lib/motion'
+import type { Product } from '@/types'
 
-interface FloatingCircle {
-  id: number
-  x: number
-  y: number
-  size: number
-  opacity: number
-  color: string
+interface ProduitAdmin extends Product {
+  soldCount?: number
 }
 
-const floatingCircles = ref<FloatingCircle[]>([])
-const animatingStats = ref(false)
-let interval: ReturnType<typeof setInterval> | undefined
+const produits = ref<ProduitAdmin[]>([])
+const chargement = ref(true)
 
-interface Stat {
-  title: string
-  value: string
-  change: string
-  icon: Component
-  bgColor: string
-  textColor: string
-  glow: string
-}
+const total = computed(() => produits.value.length)
+const enStock = computed(() => produits.value.filter((p) => (p.stock ?? 0) > 3).length)
+const stockFaible = computed(() => produits.value.filter((p) => (p.stock ?? 0) > 0 && (p.stock ?? 0) <= 3).length)
+const rupture = computed(() => produits.value.filter((p) => (p.stock ?? 0) <= 0).length)
 
-const stats: Stat[] = [
-  { title: 'Revenus Total', value: '€45,231.89', change: '+20.1% par rapport au mois dernier', icon: markRaw(DollarSign), bgColor: 'bg-emerald-50 border-emerald-100', textColor: 'text-emerald-700', glow: 'bg-emerald-400/60' },
-  { title: 'Commandes', value: '+2,350', change: '+180.1% par rapport au mois dernier', icon: markRaw(ShoppingCart), bgColor: 'bg-blue-50 border-blue-100', textColor: 'text-blue-700', glow: 'bg-blue-400/60' },
-  { title: 'Produits Vendus', value: '+12,234', change: '+19% par rapport au mois dernier', icon: markRaw(Package), bgColor: 'bg-violet-50 border-violet-100', textColor: 'text-violet-700', glow: 'bg-violet-400/60' },
-  { title: 'Utilisateurs Actifs', value: '+573', change: '+201 depuis la semaine dernière', icon: markRaw(Users), bgColor: 'bg-pink-50 border-pink-100', textColor: 'text-pink-700', glow: 'bg-pink-400/60' },
-]
+const valeurStock = computed(() =>
+  produits.value.reduce((somme, p) => somme + p.price * (p.stock ?? 0), 0)
+)
 
-interface Activity {
-  id: number
-  title: string
-  time: string
-  value: string
-  color: string
-  badgeClass: string
-  icon: Component
-}
+/** Série courte, purement indicative : aucun historique n'est disponible. */
+const serieNeutre = [30, 45, 40, 60, 55, 70, 85]
 
-const recentActivities: Activity[] = [
-  { id: 1, title: 'Nouvelle commande reçue', time: 'Il y a 2 minutes', value: '€125.00', color: 'bg-indigo-500', badgeClass: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: markRaw(ShoppingCart) },
-  { id: 2, title: 'Nouvel utilisateur inscrit', time: 'Il y a 15 minutes', value: 'Nouveau', color: 'bg-blue-500', badgeClass: 'bg-blue-100 text-blue-700 border-blue-200', icon: markRaw(Users) },
-  { id: 3, title: 'Produit mis à jour', time: 'Il y a 1 heure', value: 'Modifié', color: 'bg-amber-500', badgeClass: 'bg-amber-100 text-amber-700 border-amber-200', icon: markRaw(Package) },
-  { id: 4, title: 'Rapport généré', time: 'Il y a 2 heures', value: 'PDF', color: 'bg-emerald-500', badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: markRaw(BarChart3) },
-]
+/**
+ * Chaque indicateur se compte jusqu'à sa valeur : le chiffre est
+ * l'information principale de la carte, l'animation le désigne.
+ * `compte` est mis à jour par GSAP, `affichage` le met en forme.
+ */
+const comptes = reactive({ total: 0, valeur: 0, faible: 0, rupture: 0 })
 
-const colors = ['bg-indigo-300', 'bg-blue-300', 'bg-purple-300', 'bg-pink-300']
+const indicateurs = computed(() => [
+  {
+    libelle: 'Pièces au catalogue',
+    affichage: Math.round(comptes.total).toString(),
+    variation: null as number | null,
+    unite: '',
+    serie: serieNeutre,
+  },
+  {
+    libelle: 'Valeur du stock',
+    affichage: formatPrix(comptes.valeur),
+    variation: null as number | null,
+    unite: '',
+    serie: serieNeutre,
+  },
+  {
+    libelle: 'Stock faible',
+    affichage: Math.round(comptes.faible).toString(),
+    variation: null as number | null,
+    unite: '',
+    serie: serieNeutre,
+  },
+  {
+    libelle: 'En rupture',
+    affichage: Math.round(comptes.rupture).toString(),
+    variation: null as number | null,
+    unite: '',
+    serie: serieNeutre,
+  },
+])
 
-onMounted(() => {
-  for (let i = 0; i < 15; i++) {
-    floatingCircles.value.push({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 4 + 2,
-      opacity: Math.random() * 0.3 + 0.1,
-      color: colors[Math.floor(Math.random() * 4)],
+/** Lance le comptage et l'apparition des barres une fois les données là. */
+const animerIndicateurs = async () => {
+  const cibles = {
+    total: total.value,
+    valeur: valeurStock.value,
+    faible: stockFaible.value,
+    rupture: rupture.value,
+  }
+
+  if (mouvementReduit()) {
+    Object.assign(comptes, cibles)
+    return
+  }
+
+  gsap.to(comptes, { ...cibles, duration: DUREE.revelation, ease: COURBE.sortie })
+
+  await nextTick()
+  const barres = document.querySelectorAll('[data-barre]')
+  if (barres.length) {
+    gsap.from(barres, {
+      scaleY: 0,
+      transformOrigin: 'bottom',
+      duration: DUREE.panneau,
+      ease: COURBE.sortie,
+      stagger: { each: 0.02 },
     })
   }
-  interval = setInterval(() => {
-    animatingStats.value = true
-    setTimeout(() => (animatingStats.value = false), 2000)
-  }, 8000)
+}
+
+watch(chargement, (enCours) => {
+  if (!enCours) animerIndicateurs()
 })
 
-onBeforeUnmount(() => {
-  clearInterval(interval)
+const categories = computed(() => {
+  const compte = new Map<string, number>()
+  for (const produit of produits.value) {
+    const nom = produit.category || 'Autres'
+    compte.set(nom, (compte.get(nom) ?? 0) + 1)
+  }
+  const maximum = Math.max(1, ...compte.values())
+  return [...compte.entries()]
+    .map(([nom, valeur]) => ({ nom, total: valeur, part: (valeur / maximum) * 100 }))
+    .sort((a, b) => b.total - a.total)
+})
+
+const paliersStock = computed(() => {
+  const base = Math.max(1, total.value)
+  return [
+    { libelle: 'En stock', valeur: enStock.value, part: (enStock.value / base) * 100 },
+    { libelle: 'Stock faible', valeur: stockFaible.value, part: (stockFaible.value / base) * 100 },
+    { libelle: 'En rupture', valeur: rupture.value, part: (rupture.value / base) * 100 },
+  ]
+})
+
+const meilleuresVentes = computed(() =>
+  [...produits.value].sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0)).slice(0, 4)
+)
+
+const aTraiter = computed(() => {
+  const points: { libelle: string; detail: string; action: string; to: string; couleur: string }[] = []
+
+  if (rupture.value > 0) {
+    points.push({
+      libelle: `${rupture.value} pièce${rupture.value > 1 ? 's' : ''} en rupture`,
+      detail: 'À réapprovisionner ou à retirer du catalogue',
+      action: 'Voir',
+      to: '/admin/produits',
+      couleur: 'bg-error',
+    })
+  }
+
+  if (stockFaible.value > 0) {
+    points.push({
+      libelle: `${stockFaible.value} pièce${stockFaible.value > 1 ? 's' : ''} en stock faible`,
+      detail: 'Moins de 4 exemplaires disponibles',
+      action: 'Voir',
+      to: '/admin/produits',
+      couleur: 'bg-warning',
+    })
+  }
+
+  return points
+})
+
+onMounted(async () => {
+  try {
+    const reponse = await getCache<{ products: ProduitAdmin[] }>('/api/admin/products')
+    produits.value = reponse.data.products ?? []
+  } catch (e) {
+    console.error(e)
+  } finally {
+    chargement.value = false
+  }
 })
 </script>

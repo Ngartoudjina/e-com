@@ -161,7 +161,7 @@ import AnnouncementBar from '@/components/common/AnnouncementBar.vue'
 import SiteHeader from '@/components/common/SiteHeader.vue'
 import SiteFooter from '@/components/common/SiteFooter.vue'
 import BottomTabBar from '@/components/common/BottomTabBar.vue'
-import { api } from '@/lib/api'
+import { getCache } from '@/lib/api'
 import { formatPrix } from '@/lib/format'
 import type { Product } from '@/types'
 
@@ -254,7 +254,7 @@ const memoriser = (terme: string) => {
 const charger = async () => {
   chargement.value = true
   try {
-    const reponse = await api.get('/api/products', { params: { all: true } })
+    const reponse = await getCache<{ products: Product[]; pagination?: { totalItems: number } }>('/api/products', { all: true })
     produits.value = reponse.data.products ?? []
   } catch (e) {
     console.error(e)

@@ -264,7 +264,7 @@ import FilterSheet from '@/components/catalog/FilterSheet.vue'
 import ProductCard from '@/components/catalog/ProductCard.vue'
 import ProductListItem from '@/components/catalog/ProductListItem.vue'
 import QuickViewModal from '@/components/catalog/QuickViewModal.vue'
-import { api } from '@/lib/api'
+import { getCache } from '@/lib/api'
 import { useCartStore } from '@/stores/cart'
 import type { Product, ProductWithDetails } from '@/types'
 
@@ -385,7 +385,7 @@ const charger = async () => {
   chargement.value = true
   erreur.value = null
   try {
-    const reponse = await api.get('/api/products', { params: { all: true } })
+    const reponse = await getCache<{ products: Product[]; pagination?: { totalItems: number } }>('/api/products', { all: true })
     produits.value = reponse.data.products ?? []
     total.value = reponse.data.pagination?.totalItems ?? produits.value.length
   } catch (e) {

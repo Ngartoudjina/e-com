@@ -9,6 +9,7 @@ use App\Models\Affiliate;
 use App\Models\Product;
 use App\Models\Subscriber;
 use App\Models\User;
+use App\Services\CatalogueCache;
 use App\Services\MediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,7 +28,10 @@ use Illuminate\Support\Facades\Mail;
  */
 class AdminController extends Controller
 {
-    public function __construct(private readonly MediaService $medias) {}
+    public function __construct(
+        private readonly MediaService $medias,
+        private readonly CatalogueCache $cache,
+    ) {}
 
     // ---------------------------------------------------------------- produits
 
@@ -79,6 +83,8 @@ class AdminController extends Controller
             'media_public_id' => $publicId,
             'created_by' => $request->user()->getKey(),
         ]);
+
+        $this->cache->invalider();
 
         return response()->json([
             'success' => true,
@@ -133,6 +139,8 @@ class AdminController extends Controller
             $this->medias->supprimer($ancienPublicId);
         }
 
+        $this->cache->invalider();
+
         return response()->json([
             'success' => true,
             'product' => (new ProductResource($produit->fresh()))->resolve(),
@@ -151,6 +159,7 @@ class AdminController extends Controller
         $publicId = $produit->media_public_id;
         $produit->delete();
         $this->medias->supprimer($publicId);
+        $this->cache->invalider();
 
         return response()->json(['success' => true, 'message' => 'Produit supprimé avec succès']);
     }
@@ -199,9 +208,10 @@ class AdminController extends Controller
 
     public function analytics(): JsonResponse
     {
+        return response()->json($this->cache->memoriser('analytics', [], function () {
         $produits = Product::query();
 
-        return response()->json([
+        return [
             'success' => true,
             'analytics' => [
                 'totalProducts' => (clone $produits)->count(),
@@ -218,7 +228,8 @@ class AdminController extends Controller
                     ->pluck('total', 'category'),
             ],
             'timestamp' => now()->toIso8601String(),
-        ]);
+        ];
+        }));
     }
 
     // ---------------------------------------------------------------- newsletter
