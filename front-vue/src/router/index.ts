@@ -53,6 +53,13 @@ const router = createRouter({
       component: () => import('@/components/pages/ProductView.vue'),
     },
     {
+      // Recherche refaite d'après « 04 Recherche ».
+      path: '/recherche',
+      name: 'recherche',
+      component: () => import('@/components/pages/SearchView.vue'),
+    },
+    {
+      // Panier refait d'après « 05 Panier ».
       path: '/panier',
       name: 'panier',
       component: () => import('@/components/pages/CartView.vue'),

@@ -51,14 +51,13 @@
           l'emporte alors sur `hidden`, qui n'avait plus aucun effet.
         -->
         <div class="flex flex-1 items-center justify-end gap-1">
-          <button
-            type="button"
+          <RouterLink
+            to="/recherche"
             class="inline-flex size-11 items-center justify-center text-ink-900 transition-colors duration-[120ms] hover:text-ink-700"
             aria-label="Rechercher"
-            @click="$emit('ouvrir-recherche')"
           >
             <Search class="size-5" />
-          </button>
+          </RouterLink>
           <RouterLink
             to="/compte"
             class="hidden size-11 items-center justify-center text-ink-900 transition-colors duration-[120ms] hover:text-ink-700 lg:inline-flex"
@@ -116,8 +115,6 @@ import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Heart, Menu, Search, ShoppingBag, User, X } from 'lucide-vue-next'
 import { useCartStore } from '@/stores/cart'
-
-defineEmits<{ 'ouvrir-recherche': [] }>()
 
 const route = useRoute()
 const cartStore = useCartStore()
