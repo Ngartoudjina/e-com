@@ -1,176 +1,138 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-    <div class="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-slate-200/50 p-3 sm:p-6">
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <h2 class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-slate-800 to-indigo-600 bg-clip-text text-transparent">
-            Commandes
-          </h2>
-          <p class="text-sm sm:text-base text-slate-600 mt-1">Gérez toutes vos commandes en temps réel</p>
-        </div>
-
-        <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button variant="outline" size="sm" class="w-full sm:w-auto border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-sm py-2">
-            <Search class="h-4 w-4 mr-2" />
-            Rechercher
-          </Button>
-          <Button variant="outline" size="sm" class="w-full sm:w-auto border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-sm py-2">
-            <Filter class="h-4 w-4 mr-2" />
-            Filtrer
-          </Button>
-          <Button class="w-full sm:w-auto bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300 text-sm py-2">
-            <ShoppingCart class="mr-2 h-4 w-4" />
-            Nouvelle commande
-          </Button>
-        </div>
+  <div>
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="onglet in onglets"
+          :key="onglet.cle"
+          type="button"
+          class="chip"
+          :aria-pressed="onglet.cle === filtre"
+          @click="filtre = onglet.cle"
+        >
+          {{ onglet.libelle }}
+          <span v-if="compteur(onglet.cle)" data-numeric class="text-ink-500">· {{ compteur(onglet.cle) }}</span>
+        </button>
       </div>
+
+      <p data-numeric class="t-small text-ink-500">
+        {{ commandesFiltrees.length }} commande{{ commandesFiltrees.length > 1 ? 's' : '' }}
+      </p>
     </div>
 
-    <div class="p-3 sm:p-6 space-y-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div
-          v-for="stat in orderStats"
-          :key="stat.title"
-          class="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-slate-200/50 hover:shadow-md transition-all duration-200"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-xs sm:text-sm font-medium text-slate-600">{{ stat.title }}</p>
-              <p class="text-lg sm:text-2xl font-bold text-slate-800 mt-1">{{ stat.value }}</p>
-            </div>
-            <div class="p-2 sm:p-3 rounded-full" :class="stat.bg">
-              <component :is="stat.icon" class="h-4 w-4 sm:h-6 sm:w-6" :class="stat.color" />
-            </div>
-          </div>
-        </div>
-      </div>
+    <div v-if="chargement" class="mt-6 space-y-2">
+      <div v-for="i in 5" :key="i" class="skeleton h-16" />
+    </div>
 
-      <Card class="bg-white/70 backdrop-blur-sm shadow-xl border-slate-200/50">
-        <CardHeader class="bg-gradient-to-r from-white to-indigo-50/50 border-b border-slate-200/50 p-3 sm:p-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <CardTitle class="text-lg sm:text-xl font-semibold text-slate-800">Commandes Récentes</CardTitle>
-              <CardDescription class="text-sm text-slate-600 mt-1">{{ orders.length }} commandes trouvées</CardDescription>
-            </div>
-            <Button variant="ghost" size="sm" class="text-slate-600 hover:text-slate-800 p-1 sm:p-2">
-              <MoreVertical class="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent class="p-0">
-          <div class="divide-y divide-slate-200/50">
-            <div
-              v-for="order in orders"
-              :key="order.id"
-              class="p-3 sm:p-6 cursor-pointer group hover:bg-slate-50/50 transition-colors"
-              @click="toggleOrder(order.id)"
-            >
-              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-                <div class="flex items-center gap-3 w-full">
-                  <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-full flex items-center justify-center">
-                    <span class="text-xs sm:text-sm font-semibold text-indigo-700">#{{ order.id }}</span>
-                  </div>
-                  <div class="flex-1">
-                    <p class="font-semibold text-sm sm:text-base text-slate-800 group-hover:text-indigo-600 transition-colors">
-                      Commande #{{ order.number }}
-                    </p>
-                    <p class="text-xs sm:text-sm text-slate-500 mt-1">Client: {{ order.client }}</p>
-                    <p class="text-xs text-slate-400 mt-1">{{ order.date }}</p>
-                  </div>
-                </div>
+    <div v-else-if="erreur" class="mt-6 border border-rule bg-surface p-10 text-center">
+      <p class="t-body">{{ erreur }}</p>
+      <button type="button" class="btn btn-secondary mt-6" @click="charger">Réessayer</button>
+    </div>
 
-                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-                  <Badge :class="getStatusConfig(order.status).className" class="text-xs sm:text-sm py-1 px-2">
-                    <component :is="getStatusConfig(order.status).icon" class="h-3 w-3 mr-1" />
-                    {{ getStatusConfig(order.status).label }}
-                  </Badge>
-                  <div class="text-right w-full sm:w-auto">
-                    <p class="font-semibold text-sm sm:text-base text-slate-800">€{{ order.amount.toFixed(2) }}</p>
-                    <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 mt-1 sm:mt-0">
-                      <Button variant="ghost" size="sm" class="h-8 w-8 p-1 text-slate-400 hover:text-indigo-600">
-                        <ArrowUpRight class="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+    <div v-else-if="!commandesFiltrees.length" class="mt-6 border border-rule bg-surface p-12 text-center">
+      <p class="t-h3">Aucune commande</p>
+      <p class="t-body mt-2 text-ink-500">
+        {{ filtre === 'toutes' ? 'Les commandes passées apparaîtront ici.' : 'Aucune commande dans cet état.' }}
+      </p>
+    </div>
 
-              <div
-                v-if="selectedOrder === order.id"
-                class="mt-3 sm:mt-4 pt-2 sm:pt-4 border-t border-slate-200/50"
-              >
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
-                  <div class="bg-slate-50 rounded-lg p-2 sm:p-3">
-                    <p class="font-medium text-slate-700">Statut</p>
-                    <p class="text-slate-600 mt-1">{{ getStatusConfig(order.status).label }}</p>
-                  </div>
-                  <div class="bg-slate-50 rounded-lg p-2 sm:p-3">
-                    <p class="font-medium text-slate-700">Montant</p>
-                    <p class="text-slate-600 mt-1">€{{ order.amount.toFixed(2) }}</p>
-                  </div>
-                  <div class="bg-slate-50 rounded-lg p-2 sm:p-3">
-                    <p class="font-medium text-slate-700">Date</p>
-                    <p class="text-slate-600 mt-1">{{ order.date }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <!-- Densité 13 px, lignes de 44 px : la table doit se lire d'un coup d'œil. -->
+    <div v-else class="mt-6 overflow-x-auto border border-rule bg-surface">
+      <table class="w-full min-w-[820px] text-[13px]">
+        <thead>
+          <tr class="border-b border-rule text-left">
+            <th class="t-label px-5 py-3 font-normal text-ink-500">Référence</th>
+            <th class="t-label px-5 py-3 font-normal text-ink-500">Client</th>
+            <th class="t-label px-5 py-3 font-normal text-ink-500">Date</th>
+            <th class="t-label px-5 py-3 font-normal text-ink-500">Articles</th>
+            <th class="t-label px-5 py-3 font-normal text-ink-500">État</th>
+            <th class="t-label px-5 py-3 text-right font-normal text-ink-500">Total</th>
+            <th class="px-5 py-3"><span class="sr-only">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="commande in commandesFiltrees"
+            :key="commande.id"
+            class="h-11 border-b border-rule last:border-0 transition-colors hover:bg-rule-soft/50"
+          >
+            <td data-numeric class="px-5 py-3 text-ink-900">#{{ commande.reference }}</td>
+            <td class="px-5 py-3 text-ink-700">
+              <span class="block truncate">{{ commande.shippingAddress?.name || '—' }}</span>
+              <span class="block truncate text-[11px] text-ink-500">{{ commande.email }}</span>
+            </td>
+            <td class="px-5 py-3 text-ink-700">{{ formatDate(commande.placedAt) }}</td>
+            <td data-numeric class="px-5 py-3 text-ink-700">{{ commande.itemCount }}</td>
+            <td class="px-5 py-3">
+              <span class="t-small inline-flex items-center gap-2" :class="etat(commande.status).classe">
+                <span aria-hidden="true">●</span>{{ etat(commande.status).libelle }}
+              </span>
+            </td>
+            <td data-numeric class="px-5 py-3 text-right text-ink-900">{{ formatPrix(commande.total) }}</td>
+            <td class="px-5 py-3 text-right">
+              <RouterLink :to="`/admin/commandes/${commande.reference}`" class="btn btn-sm btn-secondary">
+                Détail
+              </RouterLink>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { markRaw, ref, type Component } from 'vue'
-import { Package, ShoppingCart, DollarSign, Search, Filter, MoreVertical, ArrowUpRight, Clock, CheckCircle } from 'lucide-vue-next'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button } from '@/components/ui/index'
+import { computed, onMounted, ref } from 'vue'
+import { api } from '@/lib/api'
+import { formatPrix } from '@/lib/format'
+import { ETATS_COMMANDE, formatDateCourte } from '@/lib/commandes'
+import type { Commande } from '@/lib/commandes'
 
-interface Order {
-  id: number
-  number: string
-  client: string
-  status: 'delivered' | 'processing' | 'pending'
-  amount: number
-  date: string
-}
+const commandes = ref<Commande[]>([])
+const compteurs = ref<Record<string, number>>({})
+const chargement = ref(true)
+const erreur = ref<string | null>(null)
+const filtre = ref('toutes')
 
-interface StatusConfig {
-  label: string
-  className: string
-  icon: Component
-}
-
-const orders: Order[] = [
-  { id: 1, number: '10001', client: 'Sophie Martin', status: 'delivered', amount: 245.5, date: '2024-07-07' },
-  { id: 2, number: '10002', client: 'Thomas Dubois', status: 'pending', amount: 189.99, date: '2024-07-06' },
-  { id: 3, number: '10003', client: 'Marie Lefebvre', status: 'delivered', amount: 320.75, date: '2024-07-05' },
-  { id: 4, number: '10004', client: 'Pierre Moreau', status: 'processing', amount: 156.3, date: '2024-07-04' },
-  { id: 5, number: '10005', client: 'Julie Rousseau', status: 'delivered', amount: 298.45, date: '2024-07-03' },
+const onglets = [
+  { cle: 'toutes', libelle: 'Toutes', statuts: [] as string[] },
+  { cle: 'a-traiter', libelle: 'À traiter', statuts: ['pending', 'paid'] },
+  { cle: 'preparation', libelle: 'En préparation', statuts: ['preparing'] },
+  { cle: 'expediees', libelle: 'Expédiées', statuts: ['shipped'] },
+  { cle: 'livrees', libelle: 'Livrées', statuts: ['delivered'] },
+  { cle: 'annulees', libelle: 'Annulées', statuts: ['cancelled', 'refunded'] },
 ]
 
-const selectedOrder = ref<number | null>(null)
+const etat = (statut: string) => ETATS_COMMANDE[statut] ?? { libelle: statut, classe: 'text-ink-500' }
+const formatDate = formatDateCourte
 
-const getStatusConfig = (status: Order['status']): StatusConfig => {
-  switch (status) {
-    case 'delivered':
-      return { label: 'Livré', className: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100', icon: markRaw(CheckCircle) }
-    case 'processing':
-      return { label: 'En traitement', className: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100', icon: markRaw(Clock) }
-    default:
-      return { label: 'En attente', className: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100', icon: markRaw(Package) }
+const commandesFiltrees = computed(() => {
+  const onglet = onglets.find((o) => o.cle === filtre.value)
+  if (!onglet?.statuts.length) return commandes.value
+  return commandes.value.filter((c) => onglet.statuts.includes(c.status))
+})
+
+/** Compteur par onglet, calculé sur les totaux renvoyés par l'API. */
+const compteur = (cle: string) => {
+  const onglet = onglets.find((o) => o.cle === cle)
+  if (!onglet?.statuts.length) return 0
+  return onglet.statuts.reduce((somme, statut) => somme + (compteurs.value[statut] ?? 0), 0)
+}
+
+const charger = async () => {
+  chargement.value = true
+  erreur.value = null
+  try {
+    const reponse = await api.get('/api/admin/orders')
+    commandes.value = reponse.data.orders ?? []
+    compteurs.value = reponse.data.byStatus ?? {}
+  } catch (e) {
+    console.error(e)
+    erreur.value = 'Les commandes n’ont pas pu être chargées.'
+  } finally {
+    chargement.value = false
   }
 }
 
-const orderStats: { title: string; value: string; icon: Component; color: string; bg: string }[] = [
-  { title: 'Total commandes', value: '1,234', icon: markRaw(ShoppingCart), color: 'text-indigo-600', bg: 'bg-indigo-50' },
-  { title: 'Commandes livrées', value: '987', icon: markRaw(CheckCircle), color: 'text-emerald-600', bg: 'bg-emerald-50' },
-  { title: 'En traitement', value: '156', icon: markRaw(Clock), color: 'text-amber-600', bg: 'bg-amber-50' },
-  { title: 'Revenus', value: '€45,678', icon: markRaw(DollarSign), color: 'text-purple-600', bg: 'bg-purple-50' },
-]
-
-const toggleOrder = (id: number) => {
-  selectedOrder.value = selectedOrder.value === id ? null : id
-}
+onMounted(charger)
 </script>

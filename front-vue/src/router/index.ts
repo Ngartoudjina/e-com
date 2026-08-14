@@ -136,6 +136,7 @@ const router = createRouter({
         { path: '', name: 'admin-accueil', component: () => import('@/components/admin/DashboardHome.vue') },
         { path: 'produits', name: 'admin-produits', component: () => import('@/components/admin/ProductsAdmin.vue') },
         { path: 'commandes', name: 'admin-commandes', component: () => import('@/components/admin/OrdersPage.vue') },
+        { path: 'commandes/:reference', name: 'admin-commande-detail', component: () => import('@/components/admin/OrderDetailPage.vue') },
         { path: 'clients', name: 'admin-clients', component: () => import('@/components/admin/UsersPage.vue') },
         { path: 'statistiques', name: 'admin-statistiques', component: () => import('@/components/admin/AnalyticsPage.vue') },
         { path: 'affiliation', name: 'admin-affiliation', component: () => import('@/components/admin/AffiliateRequestManager.vue') },

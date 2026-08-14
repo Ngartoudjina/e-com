@@ -162,7 +162,11 @@ const titres: Record<string, string> = {
   '/admin/parametres': 'Réglages',
 }
 
-const titre = computed(() => titres[route.path] ?? 'Administration')
+const titre = computed(() => {
+  // Le détail d'une commande porte sa référence en titre.
+  if (route.name === 'admin-commande-detail') return `Commande #${route.params.reference}`
+  return titres[route.path] ?? 'Administration'
+})
 
 const initiale = computed(() => (authStore.user?.name?.[0] ?? 'A').toUpperCase())
 
