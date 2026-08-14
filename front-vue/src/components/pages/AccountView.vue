@@ -44,6 +44,19 @@
             </li>
           </ul>
 
+          <!--
+            Raccourci vers l'administration. Visible seulement pour un
+            administrateur, et seulement une fois la session résolue.
+          -->
+          <RouterLink
+            v-if="estAdmin"
+            to="/admin"
+            class="mt-8 flex items-center gap-3 border border-ink-900 px-4 py-3 text-ink-900 transition-colors duration-[120ms] hover:bg-ink-900 hover:text-white"
+          >
+            <Shield class="size-4 shrink-0" />
+            <span class="t-body">Administration</span>
+          </RouterLink>
+
           <button
             type="button"
             class="mt-8 hidden px-4 py-3 text-left text-ink-500 transition-colors hover:text-ink-900 lg:block"
@@ -233,6 +246,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { Shield } from 'lucide-vue-next'
 import AnnouncementBar from '@/components/common/AnnouncementBar.vue'
 import SiteHeader from '@/components/common/SiteHeader.vue'
 import SiteFooter from '@/components/common/SiteFooter.vue'
@@ -272,6 +286,8 @@ const preferences = reactive([
 ])
 
 const utilisateur = computed(() => authStore.user)
+
+const estAdmin = computed(() => !authStore.loading && authStore.isAdmin)
 
 const prenom = computed(
   () => utilisateur.value?.firstName || utilisateur.value?.name?.split(' ')[0] || 'vous'

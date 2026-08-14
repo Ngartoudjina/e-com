@@ -184,6 +184,13 @@ router.beforeEach(async (to) => {
   authStore.init()
 
   if (to.meta.requiresAdmin) {
+    /*
+     * On attend la confirmation du serveur avant de trancher.
+     * Le profil restauré du stockage local suffit à l'affichage, mais pas à
+     * ouvrir l'administration : il serait modifiable depuis le navigateur.
+     */
+    await authStore.verification
+
     if (authStore.loading) {
       await new Promise<void>((resolve) => {
         const stop = watch(
@@ -197,6 +204,7 @@ router.beforeEach(async (to) => {
         )
       })
     }
+
     if (!authStore.isAdmin) {
       return { name: 'acces-refuse' }
     }

@@ -14,6 +14,40 @@ export interface Utilisateur {
 }
 
 const CLE_JETON = 'token'
+const CLE_UTILISATEUR = 'goldshop:utilisateur'
+
+/**
+ * Dernier profil connu, relu au démarrage.
+ *
+ * Sans lui, l'interface ignore qui est connecté jusqu'au retour de
+ * /api/auth/me — plusieurs secondes pendant lesquelles un administrateur ne
+ * voit pas son entrée vers l'administration, et l'espace client s'affiche
+ * vide. Le profil restauré n'est qu'une hypothèse : il est revalidé auprès du
+ * serveur juste après, et effacé si le jeton n'est plus valable.
+ *
+ * Il ne sert jamais à autoriser quoi que ce soit : les droits sont vérifiés à
+ * chaque requête par le middleware côté API.
+ */
+const lireProfil = (): Utilisateur | null => {
+  try {
+    const brut = localStorage.getItem(CLE_UTILISATEUR)
+    return brut ? (JSON.parse(brut) as Utilisateur) : null
+  } catch {
+    return null
+  }
+}
+
+const ecrireProfil = (utilisateur: Utilisateur | null) => {
+  try {
+    if (utilisateur) {
+      localStorage.setItem(CLE_UTILISATEUR, JSON.stringify(utilisateur))
+    } else {
+      localStorage.removeItem(CLE_UTILISATEUR)
+    }
+  } catch {
+    // Stockage indisponible : on se contente de la mémoire.
+  }
+}
 
 /**
  * Authentification par jeton Sanctum.
@@ -24,9 +58,16 @@ const CLE_JETON = 'token'
  */
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: null as Utilisateur | null,
+    // Profil restauré immédiatement : l'interface est juste dès le premier rendu.
+    user: localStorage.getItem(CLE_JETON) ? lireProfil() : null,
     loading: true,
     initialized: false,
+    /**
+     * Revalidation en cours auprès du serveur.
+     * Le profil restauré du stockage local sert à l'affichage ; toute
+     * décision d'accès doit attendre cette promesse.
+     */
+    verification: null as Promise<void> | null,
   }),
 
   getters: {
@@ -49,22 +90,33 @@ export const useAuthStore = defineStore('auth', {
         return
       }
 
-      try {
-        const reponse = await api.get('/api/auth/me')
-        this.user = reponse.data.user
-      } catch {
-        // Jeton expiré ou révoqué : on repart d'une session propre.
-        localStorage.removeItem(CLE_JETON)
-        this.user = null
-      } finally {
-        this.loading = false
-      }
+      // Un profil restauré suffit à afficher l'interface pendant la
+      // revalidation : inutile de bloquer sur `loading`.
+      if (this.user) this.loading = false
+
+      this.verification = (async () => {
+        try {
+          const reponse = await api.get('/api/auth/me')
+          this.user = reponse.data.user
+          ecrireProfil(this.user)
+        } catch {
+          // Jeton expiré ou révoqué : on repart d'une session propre.
+          localStorage.removeItem(CLE_JETON)
+          ecrireProfil(null)
+          this.user = null
+        } finally {
+          this.loading = false
+        }
+      })()
+
+      await this.verification
     },
 
     async connexion(email: string, motDePasse: string) {
       const reponse = await api.post('/api/auth/login', { email, password: motDePasse })
       localStorage.setItem(CLE_JETON, reponse.data.token)
       this.user = reponse.data.user
+      ecrireProfil(this.user)
       this.loading = false
       return this.user
     },
@@ -94,7 +146,9 @@ export const useAuthStore = defineStore('auth', {
         // Le jeton était peut-être déjà invalide : la session locale part quand même.
       }
       localStorage.removeItem(CLE_JETON)
+      ecrireProfil(null)
       this.user = null
+      this.verification = null
     },
   },
 })

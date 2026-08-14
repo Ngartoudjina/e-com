@@ -63,6 +63,20 @@
           <a href="#" class="transition-colors hover:text-white">Mentions légales</a>
           <a href="#" class="transition-colors hover:text-white">Confidentialité</a>
           <a href="#" class="transition-colors hover:text-white">Cookies</a>
+
+          <!--
+            Entrée vers l'administration, réservée aux administrateurs.
+            Le drapeau vient de /api/auth/me : rien ne s'affiche tant que la
+            session n'est pas résolue, pour éviter un clignotement.
+          -->
+          <RouterLink
+            v-if="estAdmin"
+            to="/admin"
+            class="inline-flex items-center gap-2 text-white transition-colors hover:text-white/70"
+          >
+            <Shield class="size-3.5" />
+            Administration
+          </RouterLink>
         </div>
 
         <div class="flex items-center gap-3">
@@ -82,8 +96,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { Shield } from 'lucide-vue-next'
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
+
+/** Tant que la session n'est pas résolue, on n'affiche rien. */
+const estAdmin = computed(() => !authStore.loading && authStore.isAdmin)
 
 const email = ref('')
 const retour = ref<string | null>(null)
