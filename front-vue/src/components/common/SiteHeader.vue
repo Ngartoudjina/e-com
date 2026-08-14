@@ -123,11 +123,15 @@ const route = useRoute()
 const cartStore = useCartStore()
 const menuOuvert = ref(false)
 
+/**
+ * Les cinq entrées de la maquette. Elles visent toutes le catalogue, filtré
+ * par query : le site n'a pas de rayons distincts en base.
+ */
 const navigation = [
   { libelle: 'Femme', to: '/catalogue?rayon=femme', cle: 'rayon', valeur: 'femme' },
   { libelle: 'Homme', to: '/catalogue?rayon=homme', cle: 'rayon', valeur: 'homme' },
   { libelle: 'Nouveautés', to: '/catalogue?tri=nouveautes', cle: 'tri', valeur: 'nouveautes' },
-  { libelle: 'Collections', to: '/collections' },
+  { libelle: 'Collections', to: '/catalogue' },
   { libelle: 'Archives −40 %', to: '/catalogue?remise=1', cle: 'remise', valeur: '1', accent: true },
 ]
 
@@ -135,12 +139,20 @@ const navigation = [
  * Un lien n'est actif que si sa query correspond aussi.
  * Comparer le seul chemin soulignait les cinq entrées à la fois, toutes
  * pointant vers /catalogue.
+ *
+ * L'entrée sans query (« Collections ») ne s'allume que sur le catalogue nu :
+ * sinon elle resterait active en même temps que l'entrée filtrée.
  */
+const clesDeFiltre = navigation.map((lien) => lien.cle).filter(Boolean) as string[]
+
 const estActif = (lien: (typeof navigation)[number]) => {
-  const chemin = lien.to.split('?')[0]
-  if (route.path !== chemin) return false
-  if (!lien.cle) return true
-  return route.query[lien.cle] === lien.valeur
+  if (route.path !== lien.to.split('?')[0]) return false
+
+  if (lien.cle) {
+    return route.query[lien.cle] === lien.valeur
+  }
+
+  return clesDeFiltre.every((cle) => route.query[cle] === undefined)
 }
 
 watch(() => route.fullPath, () => (menuOuvert.value = false))

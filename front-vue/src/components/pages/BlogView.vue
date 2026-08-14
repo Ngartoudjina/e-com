@@ -8,7 +8,7 @@
         Restez informé avec nos derniers articles sur le e-commerce, la technologie et le marketing.
       </p>
       <Button class="mt-6 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700">
-        <RouterLink to="/product">Explorer les articles</RouterLink>
+        <RouterLink to="/catalogue">Explorer les articles</RouterLink>
       </Button>
     </section>
 

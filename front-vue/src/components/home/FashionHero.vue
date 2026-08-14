@@ -26,7 +26,7 @@
           <div v-reveal="240" class="mt-9 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center lg:justify-start">
             <button
               type="button"
-              @click="$router.push('/product')"
+              @click="$router.push('/catalogue')"
               class="group inline-flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-primary px-8 text-base font-semibold text-primary-foreground shadow-[var(--shadow-brand)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_oklch(0.558_0.229_302_/_0.4)] active:translate-y-0"
             >
               <ShoppingBag class="size-5" />

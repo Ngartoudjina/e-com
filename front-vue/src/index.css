@@ -128,6 +128,20 @@
   --color-chart-4: var(--color-error);
   --color-chart-5: var(--color-ink-500);
 
+  /* L'ancienne échelle de marque : ramenée à l'encre, le nouveau système
+     n'ayant pas de couleur décorative. */
+  --color-brand-50: var(--color-rule-soft);
+  --color-brand-100: var(--color-rule-soft);
+  --color-brand-200: var(--color-rule);
+  --color-brand-300: var(--color-ink-300);
+  --color-brand-400: var(--color-ink-300);
+  --color-brand-500: var(--color-ink-500);
+  --color-brand-600: var(--color-ink-700);
+  --color-brand-700: var(--color-ink-700);
+  --color-brand-800: var(--color-ink-900);
+  --color-brand-900: var(--color-ink-900);
+  --color-brand-950: var(--color-ink-900);
+
   /* Ombres et courbes de l'ancien système, ramenées à celles du nouveau. */
   --shadow-soft: var(--shadow-e1);
   --shadow-lift: var(--shadow-e2);

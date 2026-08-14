@@ -41,7 +41,7 @@
               Chaque référence est vérifiée avant d'entrer au catalogue : qualité, disponibilité, prix juste.
             </p>
             <RouterLink
-              to="/product"
+              to="/catalogue"
               class="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-neutral-900 transition-transform duration-300 hover:-translate-y-0.5"
             >
               Voir le catalogue

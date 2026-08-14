@@ -57,7 +57,7 @@
               </p>
             </div>
             <RouterLink
-              to="/product"
+              to="/catalogue"
               class="group hidden items-center gap-1.5 text-sm font-semibold text-primary sm:inline-flex"
             >
               Tout voir

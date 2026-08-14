@@ -64,7 +64,7 @@ const checkVerification = async () => {
       toastStore.success(data.message || 'Email vérifié avec succès !')
       localStorage.setItem('token', data.token)
       clearInterval(pollInterval)
-      router.push('/signin')
+      router.push('/connexion')
     } else if (data.error === 'Veuillez vérifier votre email avant de continuer.') {
       isLoading.value = false
     } else {
@@ -78,7 +78,7 @@ const checkVerification = async () => {
 
 if (!tempToken || !uid) {
   toastStore.error('Données de vérification manquantes. Veuillez réessayer.')
-  router.push('/signin')
+  router.push('/connexion')
 } else {
   checkVerification()
   pollInterval = setInterval(checkVerification, 5000)

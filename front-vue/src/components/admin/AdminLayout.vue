@@ -207,6 +207,6 @@ const handleLogout = async () => {
   await signOut(auth)
   localStorage.removeItem('token')
   toastStore.success('Déconnexion réussie')
-  router.push('/signin')
+  router.push('/connexion')
 }
 </script>

@@ -17,7 +17,7 @@
           </p>
           <div class="flex gap-2">
             <Button :to="'/'">Retour à l'accueil</Button>
-            <Button variant="outline" :to="'/signin'">Se connecter</Button>
+            <Button variant="outline" :to="'/connexion'">Se connecter</Button>
           </div>
         </div>
       </CardContent>
