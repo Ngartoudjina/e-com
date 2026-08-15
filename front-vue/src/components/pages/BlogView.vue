@@ -1,128 +1,136 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-indigo-50 py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
-    <section class="text-center mb-12 sm:mb-16">
-      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-800 mb-4">
-        Bienvenue sur Notre Blog
-      </h1>
-      <p class="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
-        Restez informé avec nos derniers articles sur le e-commerce, la technologie et le marketing.
-      </p>
-      <Button class="mt-6 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700">
-        <RouterLink to="/catalogue">Explorer les articles</RouterLink>
-      </Button>
-    </section>
+  <div class="min-h-screen bg-paper">
+    <AnnouncementBar />
+    <SiteHeader />
 
-    <section class="mb-12 sm:mb-16">
-      <div class="flex flex-wrap justify-center gap-2 mb-6">
-        <Button
-          v-for="category in categories"
-          :key="category"
-          :variant="selectedCategory === category ? 'default' : 'outline'"
-          @click="selectedCategory = category"
-          class="text-sm sm:text-base"
+    <main class="mx-auto max-w-[1200px] px-5 py-12 lg:px-8 lg:py-20">
+      <h1 class="t-screen-title text-ink-900">Journal</h1>
+      <p class="t-body mt-6 max-w-xl text-ink-700">
+        Nos notes sur le vêtement, les matières et la manière dont nous travaillons.
+      </p>
+
+      <div class="mt-10 flex flex-wrap gap-2">
+        <button
+          v-for="rubrique in rubriques"
+          :key="rubrique"
+          type="button"
+          class="chip"
+          :aria-pressed="rubrique === rubriqueActive"
+          @click="rubriqueActive = rubrique"
         >
-          <Filter class="w-4 h-4 mr-2" />
-          {{ category }}
-        </Button>
+          {{ rubrique }}
+        </button>
       </div>
-    </section>
 
-    <section id="articles" class="mb-12 sm:mb-16">
-      <div class="text-center mb-8">
-        <h2 class="text-2xl sm:text-3xl font-semibold text-slate-800">
-          Derniers Articles
-        </h2>
-        <div class="w-16 h-1 bg-indigo-600 mx-auto mt-2"></div>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-        <Card v-for="post in filteredPosts" :key="post.id" class="bg-white shadow-md hover:shadow-lg transition-shadow overflow-hidden">
-          <img :src="post.image" :alt="post.title" class="w-full h-48 object-cover" />
-          <CardHeader>
-            <CardTitle class="text-lg sm:text-xl text-slate-800 line-clamp-2">
-              {{ post.title }}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p class="text-sm text-slate-600 mb-2 line-clamp-3">
-              {{ post.excerpt }}
-            </p>
-            <p class="text-xs text-slate-500">{{ post.date }}</p>
-            <Button class="mt-4 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700 w-full">
-              <RouterLink :to="`/blog/${post.id}`">Lire plus</RouterLink>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </section>
+      <ul class="mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+        <li v-for="(article, index) in articlesFiltres" :key="article.id" v-reveal="index">
+          <article>
+            <div class="aspect-[4/3] overflow-hidden bg-rule-soft">
+              <img :src="article.image" :alt="article.titre" loading="lazy" class="size-full object-cover" />
+            </div>
 
-    <section class="text-center mb-12 sm:mb-16 bg-indigo-100 p-6 sm:p-8 rounded-xl">
-      <h2 class="text-2xl sm:text-3xl font-semibold text-slate-800 mb-4">
-        Rejoignez Notre Communauté
-      </h2>
-      <p class="text-sm sm:text-base text-slate-600 mb-6 max-w-xl mx-auto">
-        Abonnez-vous pour recevoir nos derniers articles ou contribuez en écrivant pour nous !
+            <p class="t-label mt-5 text-ink-500">{{ article.rubrique }}</p>
+            <h2 class="t-h3 mt-2 text-ink-900">{{ article.titre }}</h2>
+            <p class="t-body mt-3 text-ink-700">{{ article.chapo }}</p>
+            <time :datetime="article.date" class="t-small mt-4 block text-ink-500">
+              {{ formatDateLongue(article.date) }}
+            </time>
+          </article>
+        </li>
+      </ul>
+
+      <p v-if="!articlesFiltres.length" class="t-body mt-10 text-ink-500">
+        Aucun article dans cette rubrique.
       </p>
-      <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <Button class="bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700">
-          <Mail class="mr-2 h-4 w-4" />
-          S'abonner
-        </Button>
-        <Button variant="outline" class="border-indigo-600 text-indigo-600 hover:bg-indigo-50">
-          <PenSquare class="mr-2 h-4 w-4" />
-          Écrire un article
-        </Button>
-      </div>
-    </section>
 
-    <footer class="text-center text-sm text-slate-600">
-      <p>
-        © {{ new Date().getFullYear() }} E-com. Tous droits réservés. |
-        <RouterLink to="/propos" class="text-indigo-600 hover:underline ml-2">
-          À propos
-        </RouterLink>
-      </p>
-    </footer>
+      <!-- ---------------------------------------------- Lettre -->
+      <section class="mt-16 border border-rule bg-surface p-8">
+        <h2 class="t-h3">Recevoir le journal</h2>
+        <p class="t-body mt-3 max-w-md text-ink-700">
+          Un message quand nous publions, et rien d’autre. Désinscription en un clic.
+        </p>
+
+        <form class="mt-6 flex flex-wrap gap-3" @submit.prevent="abonner">
+          <label class="min-w-0 flex-1">
+            <span class="sr-only">Adresse e-mail</span>
+            <input v-model="courriel" type="email" required class="field" placeholder="vous@exemple.fr" />
+          </label>
+          <button type="submit" class="btn btn-primary shrink-0" :disabled="envoi">
+            {{ envoi ? 'Envoi…' : 'S’abonner' }}
+          </button>
+        </form>
+      </section>
+    </main>
+
+    <SiteFooter />
+    <BottomTabBar />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Card, CardContent, CardHeader, CardTitle, Button } from '@/components/ui/index'
-import { Filter, PenSquare, Mail } from 'lucide-vue-next'
+import AnnouncementBar from '@/components/common/AnnouncementBar.vue'
+import SiteHeader from '@/components/common/SiteHeader.vue'
+import SiteFooter from '@/components/common/SiteFooter.vue'
+import BottomTabBar from '@/components/common/BottomTabBar.vue'
+import { api } from '@/lib/api'
+import { formatDateLongue } from '@/lib/commandes'
+import { useToastStore } from '@/stores/toast'
 
-const blogPosts = [
+const toastStore = useToastStore()
+
+/*
+ * Ces articles sont écrits dans le composant : aucune table ni route ne les
+ * expose côté serveur. Le jour où un back-office éditorial existera, seule
+ * cette constante sera à remplacer.
+ */
+const articles = [
   {
     id: 1,
-    title: 'Les Tendances du E-commerce en 2025',
-    excerpt: 'Découvrez les innovations qui redéfinissent le commerce en ligne cette année.',
+    titre: 'Ce que veut dire « petite série »',
+    chapo: 'Pourquoi nous produisons peu, et ce que cela change sur la pièce que vous recevez.',
     date: '2025-07-10',
     image: '/blog1.jpeg',
-    category: 'E-commerce',
+    rubrique: 'Atelier',
   },
   {
     id: 2,
-    title: 'Comment Optimiser Votre Site Web',
-    excerpt: 'Des astuces pour améliorer les performances et l\'expérience utilisateur.',
+    titre: 'Entretenir un manteau de laine',
+    chapo: 'Brossage, aération, repassage : les gestes qui font durer une pièce dix ans.',
     date: '2025-07-05',
     image: '/blog2.jpg',
-    category: 'Technologie',
+    rubrique: 'Entretien',
   },
   {
     id: 3,
-    title: 'Les Meilleures Stratégies Marketing',
-    excerpt: 'Explorez les techniques qui boostent vos campagnes marketing.',
+    titre: 'Choisir sa taille sans se tromper',
+    chapo: 'Lire un tableau de mesures, et savoir quand prendre au-dessus.',
     date: '2025-06-28',
     image: '/blog3.jpg',
-    category: 'Marketing',
+    rubrique: 'Conseils',
   },
 ]
 
-const categories = ['Tous', 'E-commerce', 'Technologie', 'Marketing']
-const selectedCategory = ref('Tous')
+const rubriques = ['Tous', ...new Set(articles.map((a) => a.rubrique))]
+const rubriqueActive = ref('Tous')
 
-const filteredPosts = computed(() =>
-  selectedCategory.value === 'Tous'
-    ? blogPosts
-    : blogPosts.filter((post) => post.category === selectedCategory.value)
+const articlesFiltres = computed(() =>
+  rubriqueActive.value === 'Tous' ? articles : articles.filter((a) => a.rubrique === rubriqueActive.value)
 )
+
+const courriel = ref('')
+const envoi = ref(false)
+
+const abonner = async () => {
+  envoi.value = true
+  try {
+    await api.post('/api/subscribe', { email: courriel.value })
+    courriel.value = ''
+    toastStore.success('Inscription enregistrée.')
+  } catch (e: any) {
+    toastStore.error(e?.response?.data?.error ?? 'L’inscription a échoué.')
+  } finally {
+    envoi.value = false
+  }
+}
 </script>

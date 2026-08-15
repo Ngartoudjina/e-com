@@ -1,528 +1,295 @@
 <template>
-  <div>
-    <div v-if="!isAuthenticated" class="text-center p-3 text-sm">
-      Connectez-vous pour accéder.
-    </div>
+  <div class="min-h-screen bg-paper">
+    <AnnouncementBar />
+    <SiteHeader />
 
-    <div v-else-if="loading" class="flex items-center justify-center min-h-screen">
-      <div class="w-6 h-6 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin" style="animation-duration: 1s"></div>
-    </div>
+    <main class="mx-auto max-w-[900px] px-5 py-12 lg:px-8 lg:py-20">
+      <h1 class="t-screen-title text-ink-900">Programme d’affiliation</h1>
+      <p class="t-body mt-4 max-w-xl text-ink-700">
+        Recommandez nos pièces et percevez une commission sur les commandes passées
+        depuis votre lien.
+      </p>
 
-    <div v-else-if="isAffiliate && affiliateData" class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 p-3">
-      <div class="max-w-2xl mx-auto">
-        <div class="mb-6">
-          <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-3">
-                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center hidden md:flex hover:rotate-180 transition-transform duration-500">
-                  <Award class="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 class="text-xl font-bold text-gray-900">
-                    Lien d'Affiliation
-                  </h1>
-                  <p class="text-gray-600 text-sm">
-                    Code: <span class="font-mono font-semibold">{{ affiliateData.affiliateCode }}</span>
-                  </p>
-                </div>
-              </div>
-              <div class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                ✓ Actif
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <h3 class="text-base font-semibold text-gray-900 mb-3">
-            Votre Lien
-          </h3>
-          <div class="flex items-center space-x-2">
-            <div class="flex-1 bg-gray-50 rounded-lg p-2 font-mono text-xs text-gray-700 break-all">
-              {{ affiliateData.referralLink }}
-            </div>
-            <button type="button" @click="copyToClipboard(affiliateData.referralLink)" class="bg-gray-100 hover:bg-gray-200 p-2 rounded-lg transition-colors hover:scale-105 active:scale-95">
-              <CheckCircle v-if="copySuccess" class="w-4 h-4 text-green-500" />
-              <Copy v-else class="w-4 h-4 text-gray-600" />
-            </button>
-            <button type="button" @click="shareLink" class="bg-gradient-to-r from-purple-500 to-blue-500 text-white p-2 rounded-lg hover:scale-105 active:scale-95 transition-transform">
-              <Share2 class="w-4 h-4" />
-            </button>
-          </div>
-          <Transition name="fade">
-            <p v-if="copySuccess" class="text-green-600 text-xs mt-1">
-              Lien copié!
-            </p>
-          </Transition>
-          <p class="mt-3 text-gray-600 text-sm">
-            Clients: {{ affiliateData.referralCount }}
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 gap-4 mt-4">
-          <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <div class="flex items-center space-x-2 mb-3">
-              <div class="p-2 bg-purple-100 rounded-lg">
-                <DollarSign class="w-5 h-5 text-purple-600" />
-              </div>
-              <h3 class="text-base font-semibold text-gray-900">Commission</h3>
-            </div>
-            <p class="text-2xl font-bold text-gray-900">
-              {{ affiliateData.commissionRate }}%
-            </p>
-            <p class="text-gray-500 text-xs mt-1">Par vente</p>
-          </div>
-
-          <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <div class="flex items-center space-x-2 mb-3">
-              <div class="p-2 bg-blue-100 rounded-lg">
-                <Users class="w-5 h-5 text-blue-600" />
-              </div>
-              <h3 class="text-base font-semibold text-gray-900">Parrainages</h3>
-            </div>
-            <p class="text-2xl font-bold text-gray-900">
-              {{ affiliateData.referralCount }}
-            </p>
-            <p class="text-gray-500 text-xs mt-1">Clients actifs</p>
-          </div>
-
-          <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <div class="flex items-center space-x-2 mb-3">
-              <div class="p-2 bg-green-100 rounded-lg">
-                <TrendingUp class="w-5 h-5 text-green-600" />
-              </div>
-              <h3 class="text-base font-semibold text-gray-900">Gains</h3>
-            </div>
-            <p class="text-2xl font-bold text-gray-900">
-              {{ (affiliateData.totalEarnings || 0).toFixed(2) }}€
-            </p>
-            <p class="text-gray-500 text-xs mt-1">Total</p>
-          </div>
-        </div>
+      <div v-if="chargement" class="mt-10 space-y-3">
+        <div v-for="i in 3" :key="i" class="skeleton h-24" />
       </div>
-    </div>
 
-    <div v-else-if="hasPendingRequest || requestStatus === 'pending'" class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 p-3">
-      <div class="max-w-2xl mx-auto text-center py-12">
-        <div class="inline-flex items-center justify-center w-20 h-20 bg-yellow-100 rounded-full mb-6 shadow-lg">
-          <Clock class="w-10 h-10 text-yellow-500" />
-        </div>
-        <h1 class="text-3xl font-bold text-gray-900 mb-3">
-          En Attente
-        </h1>
-        <p class="text-base text-gray-600 mb-6 max-w-lg mx-auto">
-          Votre demande est en cours de traitement.
+      <!-- ---------------------------------------------- Non connecté -->
+      <section v-else-if="!authStore.estConnecte" class="mt-10 border border-rule bg-surface p-8 text-center">
+        <p class="t-h3">Un compte est nécessaire</p>
+        <p class="t-body mt-3 text-ink-700">
+          Connectez-vous pour déposer une demande d’affiliation.
         </p>
-        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-          <div class="flex items-start">
-            <div class="flex-shrink-0">
-              <AlertCircle class="h-4 w-4 text-yellow-400" />
-            </div>
-            <div class="ml-2">
-              <h3 class="text-xs font-medium text-yellow-800">
-                Vérification
-              </h3>
-              <div class="mt-1 text-xs text-yellow-700">
-                <p>
-                  Examen en cours, jusqu'à 48h.
-                </p>
-              </div>
-            </div>
-          </div>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <RouterLink to="/connexion" class="btn btn-primary">Se connecter</RouterLink>
+          <RouterLink to="/inscription" class="btn btn-secondary">Créer un compte</RouterLink>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <div v-else-if="requestStatus === 'rejected'" class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 p-3">
-      <div class="max-w-2xl mx-auto text-center py-12">
-        <div class="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6 shadow-lg">
-          <X class="w-10 h-10 text-red-500" />
-        </div>
-        <h1 class="text-3xl font-bold text-gray-900 mb-3">
-          Refusée
-        </h1>
-        <p class="text-base text-gray-600 mb-6 max-w-lg mx-auto">
-          Votre demande n'a pas été approuvée.
-        </p>
-
-        <div v-if="rejectionReason" class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-          <div class="flex items-start">
-            <div class="flex-shrink-0">
-              <AlertCircle class="h-4 w-4 text-red-400" />
-            </div>
-            <div class="ml-2">
-              <h3 class="text-xs font-medium text-red-800">
-                Raison
-              </h3>
-              <div class="mt-1 text-xs text-red-700">
-                <p>{{ rejectionReason }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
-          <p class="text-gray-700 text-sm mb-4">
-            Soumettez une nouvelle demande si nécessaire.
-          </p>
-          <button
-            type="button"
-            @click="resetRejected"
-            class="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 text-sm hover:scale-105 active:scale-95"
-          >
-            Nouvelle demande
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div v-else class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 p-3">
-      <div class="max-w-2xl mx-auto text-center py-12">
-        <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full mb-6 shadow-lg hover:scale-105 hover:rotate-5 transition-transform">
-          <Star class="w-10 h-10 text-white" />
-        </div>
-
-        <h1 class="text-3xl font-bold text-gray-900 mb-3">
-          Affiliation
-        </h1>
-
-        <p class="text-base text-gray-600 mb-6 max-w-lg mx-auto">
-          Rejoignez notre programme et gagnez 5% par vente!
-        </p>
-
-        <div class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
-          <div v-if="submitSuccess" class="text-center py-6">
-            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <CheckCircle class="w-6 h-6 text-green-600" />
-            </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-1">Demande envoyée!</h3>
-            <p class="text-gray-600 text-sm">Nous vous contacterons bientôt.</p>
+      <!-- ---------------------------------------------- Affilié actif -->
+      <template v-else-if="estAffilie && donnees">
+        <section class="mt-10 border border-rule bg-surface">
+          <div class="border-b border-rule p-6">
+            <p class="t-label text-ink-500">Votre code</p>
+            <p data-numeric class="t-h1 mt-2 text-ink-900">{{ donnees.affiliateCode }}</p>
           </div>
 
-          <form v-else @submit.prevent="handleSubmitRequest" class="space-y-4">
-            <div>
-              <label class="block text-xs font-medium text-gray-700 mb-1">
-                Motivation *
-              </label>
+          <div class="border-b border-rule p-6">
+            <p class="t-label text-ink-500">Lien de parrainage</p>
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+              <code class="min-w-0 flex-1 truncate border border-rule bg-rule-soft/50 px-4 py-3 text-[13px] text-ink-700">
+                {{ donnees.referralLink }}
+              </code>
+              <button type="button" class="btn btn-secondary shrink-0" @click="copier(donnees.referralLink)">
+                {{ copie ? 'Copié' : 'Copier' }}
+              </button>
+            </div>
+          </div>
+
+          <dl class="grid gap-px bg-rule sm:grid-cols-3">
+            <div class="bg-surface p-6">
+              <dt class="t-label text-ink-500">Commission</dt>
+              <dd data-numeric class="t-h2 mt-2 text-ink-900">{{ donnees.commissionRate }} %</dd>
+            </div>
+            <div class="bg-surface p-6">
+              <dt class="t-label text-ink-500">Parrainages</dt>
+              <dd data-numeric class="t-h2 mt-2 text-ink-900">{{ donnees.referralCount ?? 0 }}</dd>
+            </div>
+            <div class="bg-surface p-6">
+              <dt class="t-label text-ink-500">Gains cumulés</dt>
+              <dd data-numeric class="t-h2 mt-2 text-ink-900">{{ formatPrix(donnees.totalEarnings ?? 0) }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <p class="t-small mt-6 text-ink-500">
+          Les gains sont calculés sur les commandes effectivement encaissées.
+        </p>
+      </template>
+
+      <!-- ---------------------------------------------- Demande en cours -->
+      <section v-else-if="statutDemande === 'pending'" class="mt-10 border border-rule bg-surface p-8">
+        <p class="t-h3">Demande en cours d’examen</p>
+        <p class="t-body mt-3 text-ink-700">
+          Nous revenons vers vous dès qu’elle est traitée. Inutile d’en déposer une seconde.
+        </p>
+      </section>
+
+      <!-- ---------------------------------------------- Formulaire -->
+      <template v-else>
+        <section v-if="statutDemande === 'rejected'" class="mt-10 border border-rule bg-surface p-6">
+          <p class="t-h3">Demande précédente refusée</p>
+          <p v-if="motifRefus" class="t-body mt-3 text-ink-700">{{ motifRefus }}</p>
+          <p class="t-body mt-3 text-ink-700">Vous pouvez en déposer une nouvelle ci-dessous.</p>
+        </section>
+
+        <form class="mt-10 border border-rule bg-surface" @submit.prevent="envoyer">
+          <div class="border-b border-rule p-6">
+            <h2 class="t-h3">Déposer une demande</h2>
+            <p class="t-small mt-1 text-ink-500">
+              Une pièce d’identité est demandée pour verser les commissions.
+            </p>
+          </div>
+
+          <div class="space-y-6 p-6">
+            <label class="block">
+              <span class="t-label text-ink-500">Votre motivation</span>
               <textarea
-                v-model="reason"
-                :class="errors.reason ? 'border-red-300 bg-red-50' : 'border-gray-300'"
-                class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-purple-500 transition-all duration-200 resize-none"
-                rows="3"
-                placeholder="Pourquoi devenir affilié? (expérience, canaux...)"
-                :disabled="hasPendingRequest"
-              ></textarea>
-              <p v-if="errors.reason" class="text-red-600 text-xs mt-1 flex items-center">
-                <AlertCircle class="w-3 h-3 mr-1" />
-                {{ errors.reason }}
-              </p>
-              <p class="text-gray-500 text-xs mt-1">
-                {{ reason.length }}/500
-              </p>
-            </div>
+                v-model="motivation"
+                class="field mt-3 min-h-32 py-3"
+                maxlength="2000"
+                placeholder="Comment comptez-vous parler de nos pièces ?"
+              />
+              <span class="t-small mt-2 block" :class="erreurs.motivation ? 'text-error' : 'text-ink-500'">
+                {{ erreurs.motivation ?? `${motivation.trim().length} / 50 caractères minimum` }}
+              </span>
+            </label>
 
             <div>
-              <label class="block text-xs font-medium text-gray-700 mb-1">
-                Carte d'identité *
-              </label>
-              <div v-if="!imagePreview">
-                <div
-                  class="relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200"
-                  :class="errors.identityCard ? 'border-red-300 bg-red-50' : hasPendingRequest ? 'border-gray-200 bg-gray-50 cursor-not-allowed' : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50 cursor-pointer'"
-                >
-                  <input
-                    type="file"
-                    accept="image/*"
-                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    :disabled="hasPendingRequest"
-                    @change="handleFileChange"
-                  />
-                  <Upload class="w-8 h-8 mx-auto mb-3" :class="hasPendingRequest ? 'text-gray-300' : 'text-gray-400'" />
-                  <p class="font-medium text-sm" :class="hasPendingRequest ? 'text-gray-400' : 'text-gray-600'">
-                    {{ hasPendingRequest ? 'Upload désactivé' : 'Uploader image' }}
-                  </p>
-                  <p class="text-xs" :class="hasPendingRequest ? 'text-gray-300' : 'text-gray-500'">
-                    PNG, JPG, max 5MB
-                  </p>
-                </div>
-              </div>
-              <div v-else class="relative">
-                <div class="relative bg-gray-100 rounded-xl p-3">
-                  <img :src="imagePreview" alt="Prévisualisation" class="w-full h-40 object-cover rounded-lg" />
+              <span class="t-label text-ink-500">Pièce d’identité</span>
+              <p class="t-small mt-1 text-ink-500">Image de 5 Mo au plus.</p>
+
+              <div class="mt-3 flex flex-wrap items-start gap-5">
+                <label class="flex h-32 w-full cursor-pointer items-center justify-center border border-dashed border-rule text-center transition-colors hover:bg-rule-soft/50 sm:w-72">
+                  <input type="file" accept="image/*" class="sr-only" @change="choisirPiece" />
+                  <span class="t-small px-4 text-ink-500">
+                    {{ piece ? piece.name : 'Choisir un fichier' }}
+                  </span>
+                </label>
+
+                <div v-if="apercu" class="relative w-40 shrink-0 border border-rule">
+                  <img :src="apercu" alt="Aperçu de la pièce d’identité" class="aspect-[3/4] w-full object-cover" />
                   <button
-                    v-if="!hasPendingRequest"
                     type="button"
-                    @click="removeImage"
-                    class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors hover:scale-110 active:scale-90"
+                    class="btn btn-icon absolute right-1 top-1 bg-surface"
+                    aria-label="Retirer le fichier"
+                    @click="retirerPiece"
                   >
-                    <X class="w-3 h-3" />
+                    <X class="size-4" />
                   </button>
                 </div>
-                <p class="text-gray-600 text-xs mt-1 text-center">
-                  {{ identityCard?.name }} ({{ ((identityCard?.size || 0) / 1024 / 1024).toFixed(2) }} MB)
-                </p>
               </div>
-              <p v-if="errors.identityCard" class="text-red-600 text-xs mt-1 flex items-center">
-                <AlertCircle class="w-3 h-3 mr-1" />
-                {{ errors.identityCard }}
-              </p>
+
+              <p v-if="erreurs.piece" class="t-small mt-2 text-error">{{ erreurs.piece }}</p>
             </div>
-
-            <button
-              type="submit"
-              :disabled="submitLoading || hasPendingRequest"
-              class="w-full px-4 py-3 rounded-xl font-semibold shadow-lg transition-all duration-200 text-sm"
-              :class="hasPendingRequest ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:shadow-xl hover:scale-105 active:scale-95'"
-            >
-              <div v-if="submitLoading" class="flex items-center justify-center">
-                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1"></div>
-                Envoi...
-              </div>
-              <span v-else-if="hasPendingRequest" class="flex items-center justify-center">
-                Demande en attente
-              </span>
-              <span v-else class="flex items-center justify-center">
-                Soumettre
-                <ChevronRight class="w-4 h-4 ml-1" />
-              </span>
-            </button>
-          </form>
-        </div>
-
-        <div class="grid grid-cols-1 gap-4 mt-8 max-w-2xl mx-auto">
-          <div v-for="item in benefits" :key="item.title" class="bg-white p-4 rounded-xl shadow-lg border border-gray-100 hover:-translate-y-1 hover:scale-105 transition-transform">
-            <component :is="item.icon" class="w-6 h-6 text-purple-500 mb-2 mx-auto" />
-            <h3 class="font-semibold text-gray-900 text-sm">{{ item.title }}</h3>
-            <p class="text-gray-600 text-xs">{{ item.desc }}</p>
           </div>
-        </div>
-      </div>
-    </div>
+
+          <div class="border-t border-rule p-6">
+            <button type="submit" class="btn btn-primary" :disabled="envoi">
+              {{ envoi ? 'Envoi en cours…' : 'Déposer ma demande' }}
+            </button>
+          </div>
+        </form>
+      </template>
+    </main>
+
+    <SiteFooter />
+    <BottomTabBar />
   </div>
 </template>
 
 <script setup lang="ts">
-import { markRaw, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
-import { Copy, Share2, DollarSign, Users, TrendingUp, CheckCircle, Star, Award, ChevronRight, Upload, X, AlertCircle, Clock } from 'lucide-vue-next'
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { X } from 'lucide-vue-next'
+import AnnouncementBar from '@/components/common/AnnouncementBar.vue'
+import SiteHeader from '@/components/common/SiteHeader.vue'
+import SiteFooter from '@/components/common/SiteFooter.vue'
+import BottomTabBar from '@/components/common/BottomTabBar.vue'
 import { api } from '@/lib/api'
+import { formatPrix } from '@/lib/format'
+import { useAuthStore } from '@/stores/auth'
+import { useToastStore } from '@/stores/toast'
 
-interface AffiliateData {
-  uid: string
+interface DonneesAffilie {
   affiliateCode: string
   referralLink: string
-  identityCardUrl?: string
   commissionRate: number
   totalEarnings: number
-  totalReferrals: number
-  isActive: boolean
-  createdAt: string
   referralCount: number
 }
 
-interface AffiliateStatusResponse {
-  isAffiliate: boolean
-  affiliateData?: AffiliateData
-  requestStatus?: 'pending' | 'approved' | 'rejected' | null
-  rejectionReason?: string
-  hasPendingRequest?: boolean
-}
+const authStore = useAuthStore()
+const toastStore = useToastStore()
 
-const isAuthenticated = ref(false)
-const isAffiliate = ref(false)
-const affiliateData = ref<AffiliateData | null>(null)
-const loading = ref(true)
-const copySuccess = ref(false)
-const reason = ref('')
-const identityCard = ref<File | null>(null)
-const imagePreview = ref<string | null>(null)
-const userId = ref<string | null>(null)
-const submitLoading = ref(false)
-const errors = ref<{ reason?: string; identityCard?: string }>({})
-const submitSuccess = ref(false)
-const requestStatus = ref<'pending' | 'approved' | 'rejected' | null>(null)
-const rejectionReason = ref<string | null>(null)
-const hasPendingRequest = ref(false)
+const chargement = ref(true)
+const estAffilie = ref(false)
+const donnees = ref<DonneesAffilie | null>(null)
+const statutDemande = ref<'pending' | 'approved' | 'rejected' | null>(null)
+const motifRefus = ref<string | null>(null)
 
-const benefits: { icon: Component; title: string; desc: string }[] = [
-  { icon: markRaw(DollarSign), title: '5% Commission', desc: 'Par vente' },
-  { icon: markRaw(Users), title: 'Support', desc: 'Assistance dédiée' },
-  { icon: markRaw(TrendingUp), title: 'Outils', desc: 'Promotion' },
-]
+const motivation = ref('')
+const piece = ref<File | null>(null)
+const apercu = ref<string | null>(null)
+const envoi = ref(false)
+const copie = ref(false)
+const erreurs = reactive<{ motivation?: string; piece?: string }>({})
 
-let copyTimer: ReturnType<typeof setTimeout> | undefined
-let successTimer: ReturnType<typeof setTimeout> | undefined
-let pollInterval: ReturnType<typeof setInterval> | undefined
+let sondage: ReturnType<typeof setInterval> | undefined
+let minuteurCopie: ReturnType<typeof setTimeout> | undefined
 
-const fetchStatus = async () => {
-  loading.value = true
+const lireStatut = async () => {
   try {
-    const token = localStorage.getItem('token')
-    const response = await api.get<AffiliateStatusResponse>('/api/affiliate/status', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    isAffiliate.value = response.data.isAffiliate
-    affiliateData.value = response.data.affiliateData || null
-    requestStatus.value = response.data.requestStatus || null
-    rejectionReason.value = response.data.rejectionReason || null
-    hasPendingRequest.value = response.data.hasPendingRequest || false
-    if (response.data.hasPendingRequest) {
-      reason.value = ''
-      identityCard.value = null
-      imagePreview.value = null
-    }
-  } catch (err) {
-    console.error('Erreur statut:', err)
-    isAffiliate.value = false
-    requestStatus.value = null
-    hasPendingRequest.value = false
+    const reponse = await api.get('/api/affiliate/status')
+    estAffilie.value = reponse.data.isAffiliate ?? false
+    donnees.value = reponse.data.affiliateData ?? null
+    statutDemande.value = reponse.data.requestStatus ?? null
+    motifRefus.value = reponse.data.rejectionReason ?? null
+  } catch (e) {
+    console.error(e)
+    estAffilie.value = false
+    statutDemande.value = null
   } finally {
-    loading.value = false
+    chargement.value = false
   }
 }
 
-onMounted(() => {
-  const token = localStorage.getItem('token')
-  if (!token) {
-    loading.value = false
-    isAuthenticated.value = false
+const choisirPiece = (evenement: Event) => {
+  const champ = evenement.target as HTMLInputElement
+  const choisi = champ.files?.[0]
+  if (!choisi) return
+
+  if (choisi.size > 5 * 1024 * 1024) {
+    erreurs.piece = 'Le fichier dépasse 5 Mo.'
+    champ.value = ''
     return
   }
-  isAuthenticated.value = true
-  try {
-    const decoded = JSON.parse(atob(token.split('.')[1]))
-    userId.value = decoded.uid
-  } catch (e) {
-    console.error('Token invalide:', e)
+  if (!choisi.type.startsWith('image/')) {
+    erreurs.piece = 'Le fichier doit être une image.'
+    champ.value = ''
+    return
   }
-  fetchStatus()
-  pollInterval = setInterval(fetchStatus, 30000)
+
+  erreurs.piece = undefined
+  if (apercu.value) URL.revokeObjectURL(apercu.value)
+  piece.value = choisi
+  apercu.value = URL.createObjectURL(choisi)
+}
+
+const retirerPiece = () => {
+  if (apercu.value) URL.revokeObjectURL(apercu.value)
+  piece.value = null
+  apercu.value = null
+}
+
+const envoyer = async () => {
+  erreurs.motivation = motivation.value.trim().length < 50 ? 'Décrivez votre démarche en 50 caractères au moins.' : undefined
+  erreurs.piece = piece.value ? undefined : 'Une pièce d’identité est nécessaire.'
+  if (erreurs.motivation || erreurs.piece) return
+
+  /*
+   * L'identité du demandeur est déduite du jeton par le serveur.
+   * L'ancienne version la lisait en décodant le jeton avec `atob`, hérité de
+   * Firebase : un jeton Sanctum n'est pas un JWT, le décodage échouait à tous
+   * les coups et le formulaire refusait d'envoyer quoi que ce soit.
+   */
+  const corps = new FormData()
+  corps.append('reason', motivation.value)
+  corps.append('identityCard', piece.value as File)
+
+  envoi.value = true
+  try {
+    await api.post('/api/affiliate/request', corps, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    statutDemande.value = 'pending'
+    motivation.value = ''
+    retirerPiece()
+    toastStore.success('Demande transmise.')
+  } catch (e: any) {
+    toastStore.error(e?.response?.data?.error ?? 'L’envoi a échoué.')
+  } finally {
+    envoi.value = false
+  }
+}
+
+const copier = async (texte: string) => {
+  try {
+    await navigator.clipboard.writeText(texte)
+    copie.value = true
+    clearTimeout(minuteurCopie)
+    minuteurCopie = setTimeout(() => (copie.value = false), 2000)
+  } catch {
+    toastStore.error('La copie a échoué.')
+  }
+}
+
+onMounted(async () => {
+  authStore.init()
+  await authStore.verification
+
+  if (!authStore.estConnecte) {
+    chargement.value = false
+    return
+  }
+
+  await lireStatut()
+  // Une demande peut être traitée pendant la visite.
+  sondage = setInterval(lireStatut, 30000)
 })
 
 onBeforeUnmount(() => {
-  clearInterval(pollInterval)
-  clearTimeout(copyTimer)
-  clearTimeout(successTimer)
+  clearInterval(sondage)
+  clearTimeout(minuteurCopie)
+  if (apercu.value) URL.revokeObjectURL(apercu.value)
 })
-
-const handleFileChange = (event: Event) => {
-  if (hasPendingRequest.value) return
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (file) {
-    if (file.size > 5 * 1024 * 1024) {
-      errors.value = { ...errors.value, identityCard: 'Fichier > 5MB' }
-      return
-    }
-    if (!file.type.startsWith('image/')) {
-      errors.value = { ...errors.value, identityCard: 'Image invalide' }
-      return
-    }
-    identityCard.value = file
-    errors.value = { ...errors.value, identityCard: undefined }
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      imagePreview.value = event.target?.result as string
-    }
-    reader.readAsDataURL(file)
-  }
-}
-
-const removeImage = () => {
-  if (hasPendingRequest.value) return
-  identityCard.value = null
-  imagePreview.value = null
-  errors.value = { ...errors.value, identityCard: undefined }
-}
-
-const validateForm = () => {
-  const newErrors: { reason?: string; identityCard?: string } = {}
-  if (!reason.value.trim()) {
-    newErrors.reason = 'Motivation requise'
-  } else if (reason.value.trim().length < 50) {
-    newErrors.reason = 'Min. 50 caractères'
-  }
-  if (!identityCard.value) {
-    newErrors.identityCard = 'Carte d\'identité requise'
-  }
-  errors.value = newErrors
-  return Object.keys(newErrors).length === 0
-}
-
-const handleSubmitRequest = async () => {
-  if (hasPendingRequest.value) return
-  if (!validateForm()) return
-
-  submitLoading.value = true
-  const token = localStorage.getItem('token')
-  if (!token || !userId.value) {
-    errors.value = { reason: undefined, identityCard: 'Authentification requise' }
-    submitLoading.value = false
-    return
-  }
-
-  const formData = new FormData()
-  formData.append('reason', reason.value)
-  if (identityCard.value) formData.append('identityCard', identityCard.value)
-
-  try {
-    await api.post('/api/affiliate/request', formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-    submitSuccess.value = true
-    requestStatus.value = 'pending'
-    hasPendingRequest.value = true
-    setTimeout(() => (submitSuccess.value = false), 3000)
-  } catch (error: any) {
-    console.error('Erreur soumission:', error)
-    errors.value = { reason: error.response?.data?.error || 'Erreur soumission', identityCard: undefined }
-  } finally {
-    submitLoading.value = false
-  }
-}
-
-const copyToClipboard = (text: string) => {
-  navigator.clipboard.writeText(text)
-  copySuccess.value = true
-  clearTimeout(copyTimer)
-  copyTimer = setTimeout(() => (copySuccess.value = false), 2000)
-}
-
-const shareLink = async () => {
-  if (navigator.share && affiliateData.value) {
-    try {
-      await navigator.share({
-        title: 'Rejoignez-moi!',
-        text: 'Découvrez avec réduction!',
-        url: affiliateData.value.referralLink,
-      })
-    } catch (error) {
-      copyToClipboard(affiliateData.value.referralLink)
-    }
-  } else if (affiliateData.value) {
-    copyToClipboard(affiliateData.value.referralLink)
-  }
-}
-
-const resetRejected = () => {
-  requestStatus.value = null
-  reason.value = ''
-  identityCard.value = null
-  imagePreview.value = null
-  hasPendingRequest.value = false
-}
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(10px);
-}
-</style>

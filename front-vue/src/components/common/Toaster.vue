@@ -1,50 +1,71 @@
 <template>
-  <div class="pointer-events-none fixed inset-x-4 top-4 z-[9999] flex flex-col items-center gap-2 sm:inset-x-auto sm:right-5 sm:items-end">
+  <div
+    class="pointer-events-none fixed inset-x-4 bottom-4 z-[9999] flex flex-col items-center gap-2 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:items-end"
+    role="status"
+    aria-live="polite"
+  >
     <TransitionGroup name="toast">
       <button
         v-for="toast in toastStore.toasts"
         :key="toast.id"
         type="button"
-        class="glass pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl p-4 text-left shadow-[var(--shadow-float)]"
+        class="pointer-events-auto flex w-full max-w-sm items-start gap-3 border border-rule bg-ink-900 px-5 py-4 text-left text-paper shadow-e2"
         @click="toastStore.remove(toast.id)"
       >
-        <span
-          class="flex size-9 shrink-0 items-center justify-center rounded-xl"
-          :class="{
-            'bg-success/12 text-success': toast.type === 'success',
-            'bg-destructive/12 text-destructive': toast.type === 'error',
-            'bg-primary/12 text-primary': toast.type === 'info',
-          }"
-        >
-          <CheckCircle v-if="toast.type === 'success'" class="size-[18px]" />
-          <AlertCircle v-else-if="toast.type === 'error'" class="size-[18px]" />
-          <Info v-else class="size-[18px]" />
+        <!-- Rayon 0 et fond encre : le message emprunte au reste du système. -->
+        <span aria-hidden="true" class="t-small shrink-0 pt-px" :class="marque[toast.type].classe">
+          {{ marque[toast.type].signe }}
         </span>
-        <span class="flex-1 pt-1.5 text-sm font-medium leading-snug">{{ toast.message }}</span>
-        <X class="mt-1.5 size-4 shrink-0 text-muted-foreground" />
+        <span class="t-body flex-1 text-paper">{{ toast.message }}</span>
+        <X class="mt-px size-4 shrink-0 opacity-60" />
       </button>
     </TransitionGroup>
   </div>
 </template>
 
 <script setup lang="ts">
-import { AlertCircle, CheckCircle, Info, X } from 'lucide-vue-next'
+import { X } from 'lucide-vue-next'
 import { useToastStore } from '@/stores/toast'
 
 const toastStore = useToastStore()
+
+const marque = {
+  success: { signe: '●', classe: 'text-success' },
+  error: { signe: '●', classe: 'text-error' },
+  info: { signe: '●', classe: 'text-paper/70' },
+} as const
 </script>
 
 <style scoped>
+@reference "@/index.css";
+
+/* Durée « panneau » et courbe de sortie du système de mouvement. */
 .toast-enter-active,
 .toast-leave-active {
-  transition: opacity 0.25s ease, transform 0.3s var(--ease-out-expo);
+  transition:
+    opacity 200ms var(--ease-exit),
+    transform 320ms var(--ease-exit);
 }
+
 .toast-enter-from,
 .toast-leave-to {
   opacity: 0;
-  transform: translateY(-12px) scale(0.96);
+  transform: translateY(8px);
 }
+
 .toast-leave-active {
   position: absolute;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter-active,
+  .toast-leave-active {
+    transition: opacity 120ms linear;
+  }
+
+  .toast-enter-from,
+  .toast-leave-to {
+    transform: none;
+  }
 }
 </style>

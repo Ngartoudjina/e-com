@@ -1,117 +1,68 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-indigo-50 py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
-    <section class="text-center mb-12 sm:mb-16">
-      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-800 mb-4">
-        À Propos de Nous
-      </h1>
-      <p class="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
-        Découvrez l'histoire, la mission et l'équipe derrière notre plateforme e-commerce innovante.
+  <div class="min-h-screen bg-paper">
+    <AnnouncementBar />
+    <SiteHeader />
+
+    <main class="mx-auto max-w-[900px] px-5 py-12 lg:px-8 lg:py-20">
+      <h1 class="t-screen-title text-ink-900">À propos</h1>
+      <p class="t-body mt-6 max-w-xl text-ink-700">
+        GOLDSHOP est une maison de prêt-à-porter qui produit en petites séries.
+        Nous vendons directement, sans intermédiaire, pour garder la main sur la
+        qualité comme sur le prix.
       </p>
-    </section>
 
-    <section class="mb-12 sm:mb-16">
-      <div class="text-center mb-8">
-        <h2 class="text-2xl sm:text-3xl font-semibold text-slate-800">
-          Qui Sommes-Nous ?
-        </h2>
-        <div class="w-16 h-1 bg-indigo-600 mx-auto mt-2"></div>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        <Card class="bg-white shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <CardTitle class="text-lg sm:text-xl text-slate-800">
-              Notre Mission
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p class="text-sm sm:text-base text-slate-600">
-              Nous visons à offrir une expérience d'achat en ligne fluide et sécurisée, avec des
-              produits de qualité à des prix compétitifs.
-            </p>
-          </CardContent>
-        </Card>
-        <Card class="bg-white shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <CardTitle class="text-lg sm:text-xl text-slate-800">
-              Notre Vision
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p class="text-sm sm:text-base text-slate-600">
-              Devenir le leader mondial du commerce électronique en mettant l'accent sur
-              l'innovation et la satisfaction client.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    </section>
+      <!-- ---------------------------------------------- Équipe -->
+      <section class="mt-14">
+        <h2 class="t-h1 text-ink-900">L’équipe</h2>
 
-    <section class="mb-12 sm:mb-16">
-      <div class="text-center mb-8">
-        <h2 class="text-2xl sm:text-3xl font-semibold text-slate-800">
-          Notre Équipe
-        </h2>
-        <div class="w-16 h-1 bg-indigo-600 mx-auto mt-2"></div>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-        <Card v-for="member in team" :key="member.name" class="bg-white shadow-md hover:shadow-lg transition-shadow">
-          <CardContent class="p-6 text-center">
-            <div class="w-24 h-24 bg-indigo-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-              <Users class="h-12 w-12 text-indigo-600" />
-            </div>
-            <h3 class="text-lg font-semibold text-slate-800">{{ member.name }}</h3>
-            <p class="text-sm text-slate-600">{{ member.role }}</p>
-          </CardContent>
-        </Card>
-      </div>
-    </section>
+        <ul class="mt-8 grid gap-px bg-rule sm:grid-cols-3">
+          <li v-for="membre in equipe" :key="membre.nom" class="bg-surface p-6">
+            <p class="t-body text-ink-900">{{ membre.nom }}</p>
+            <p class="t-small mt-2 text-ink-500">{{ membre.role }}</p>
+          </li>
+        </ul>
+      </section>
 
-    <section class="mb-12 sm:mb-16">
-      <div class="text-center mb-8">
-        <h2 class="text-2xl sm:text-3xl font-semibold text-slate-800">
-          Contactez-Nous
-        </h2>
-        <div class="w-16 h-1 bg-indigo-600 mx-auto mt-2"></div>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-        <Card class="bg-white shadow-md hover:shadow-lg transition-shadow">
-          <CardContent class="p-6 text-center">
-            <Mail class="h-8 w-8 text-indigo-600 mx-auto mb-4" />
-            <h3 class="text-lg font-semibold text-slate-800">Email</h3>
-            <p class="text-sm text-slate-600">support@e-com.com</p>
-          </CardContent>
-        </Card>
-        <Card class="bg-white shadow-md hover:shadow-lg transition-shadow">
-          <CardContent class="p-6 text-center">
-            <Phone class="h-8 w-8 text-indigo-600 mx-auto mb-4" />
-            <h3 class="text-lg font-semibold text-slate-800">Téléphone</h3>
-            <p class="text-sm text-slate-600">+229 59 33 44 83</p>
-          </CardContent>
-        </Card>
-        <Card class="bg-white shadow-md hover:shadow-lg transition-shadow">
-          <CardContent class="p-6 text-center">
-            <MapPin class="h-8 w-8 text-indigo-600 mx-auto mb-4" />
-            <h3 class="text-lg font-semibold text-slate-800">Adresse</h3>
-            <p class="text-sm text-slate-600">123 Rue Commerce, Cotonou, Bénin</p>
-          </CardContent>
-        </Card>
-      </div>
-      <div class="text-center mt-8">
-        <Button class="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700">
-          <RouterLink to="/">Nous Contacter</RouterLink>
-        </Button>
-      </div>
-    </section>
+      <!-- ---------------------------------------------- Contact -->
+      <section class="mt-14">
+        <h2 class="t-h1 text-ink-900">Nous écrire</h2>
+
+        <dl class="mt-8 border border-rule bg-surface">
+          <div v-for="(ligne, index) in contact" :key="ligne.libelle" class="p-6" :class="index > 0 ? 'border-t border-rule' : ''">
+            <dt class="t-label text-ink-500">{{ ligne.libelle }}</dt>
+            <dd class="t-body mt-2 text-ink-900">
+              <a v-if="ligne.lien" :href="ligne.lien" class="underline underline-offset-4 hover:text-ink-700">
+                {{ ligne.valeur }}
+              </a>
+              <template v-else>{{ ligne.valeur }}</template>
+            </dd>
+          </div>
+        </dl>
+
+        <RouterLink to="/aide/contact" class="btn btn-secondary mt-8">Poser une question</RouterLink>
+      </section>
+    </main>
+
+    <SiteFooter />
+    <BottomTabBar />
   </div>
 </template>
 
 <script setup lang="ts">
-import { Users, Mail, Phone, MapPin } from 'lucide-vue-next'
-import { Card, CardContent, CardHeader, CardTitle, Button } from '@/components/ui/index'
+import AnnouncementBar from '@/components/common/AnnouncementBar.vue'
+import SiteHeader from '@/components/common/SiteHeader.vue'
+import SiteFooter from '@/components/common/SiteFooter.vue'
+import BottomTabBar from '@/components/common/BottomTabBar.vue'
 
-const team = [
-  { name: 'Tchinhoun Thibaut', role: 'CEO & Fondateur' },
-  { name: 'Akoha Harmine', role: 'Directrice Marketing' },
-  { name: 'Abel Beingar', role: 'Développeur Principal' },
+const equipe = [
+  { nom: 'Tchinhoun Thibaut', role: 'Direction et fondation' },
+  { nom: 'Akoha Harmine', role: 'Direction marketing' },
+  { nom: 'Abel Beingar', role: 'Développement' },
+]
+
+const contact = [
+  { libelle: 'E-mail', valeur: 'support@e-com.com', lien: 'mailto:support@e-com.com' },
+  { libelle: 'Téléphone', valeur: '+229 59 33 44 83', lien: 'tel:+22959334483' },
+  { libelle: 'Adresse', valeur: '123 rue Commerce, Cotonou, Bénin', lien: null },
 ]
 </script>
