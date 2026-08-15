@@ -115,12 +115,30 @@ const cle = lireEnv(`${RACINE}/back/.env.local`, 'CLOUDINARY_API_KEY')
 const secret = lireEnv(`${RACINE}/back/.env.local`, 'CLOUDINARY_API_SECRET')
 
 if (cle !== CLOUDINARY_EXPOSE.cle || cloud !== CLOUDINARY_EXPOSE.cloud) {
+  /*
+   * Sans le secret, la validité de la clé est hors de portée. Reste à savoir
+   * si le compte existe encore : res.cloudinary.com sert les visuels d'un
+   * cloud vivant et rend 404 pour un nom inconnu. Un compte supprimé ne peut
+   * plus honorer sa clé, quel qu'en soit l'état.
+   */
+  let existence = 'inconnue'
+  try {
+    const sonde = await fetch(`https://res.cloudinary.com/${CLOUDINARY_EXPOSE.cloud}/image/upload/sample.jpg`, {
+      signal: AbortSignal.timeout(60000),
+    })
+    existence = sonde.status === 404 ? 'supprimé' : 'existe toujours'
+  } catch {
+    // Laissé « inconnue » : une panne réseau ne prouve pas une suppression.
+  }
+
   noter(
     'Clés Cloudinary exposées',
-    'incontrôlable d’ici',
-    `le secret du cloud « ${CLOUDINARY_EXPOSE.cloud} » (clé ${CLOUDINARY_EXPOSE.cle}) n’est plus sur ce poste. ` +
-      'Créer un compte neuf ne révoque pas l’ancien : à constater dans sa console.',
-    'inconnu'
+    existence === 'supprimé' ? 'compte supprimé' : 'incontrôlable d’ici',
+    existence === 'supprimé'
+      ? `le cloud « ${CLOUDINARY_EXPOSE.cloud} » n’existe plus : sa clé ne peut plus servir`
+      : `le secret du cloud « ${CLOUDINARY_EXPOSE.cloud} » (clé ${CLOUDINARY_EXPOSE.cle}) n’est plus sur ce poste, ` +
+        `et le compte ${existence}. Créer un cloud neuf ne révoque pas l’ancien : à constater dans sa console.`,
+    existence === 'supprimé' ? 'clos' : 'inconnu'
   )
 } else if (!secret) {
   noter('Clés Cloudinary exposées', 'indéterminé', 'clé présente mais secret absent du fichier', 'inconnu')
