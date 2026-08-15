@@ -20,7 +20,17 @@ const lireEnv = (chemin, cle) => {
 }
 
 const resultats = []
-const noter = (sujet, etat, detail) => resultats.push({ sujet, etat, detail })
+/*
+ * `gravite` est portée par chaque constat, jamais déduite du libellé.
+ * Deviner d'après le texte français a déjà produit un verdict faux :
+ * « incontrôlable » ne contient pas « contrôler », et la ligne s'affichait
+ * en vert alors que rien n'avait été vérifié.
+ *
+ *   vif     — l'identifiant fonctionne encore
+ *   clos    — le fournisseur l'a refusé
+ *   inconnu — le contrôle n'a pas tranché ; ce n'est pas une révocation
+ */
+const noter = (sujet, etat, detail, gravite) => resultats.push({ sujet, etat, detail, gravite })
 
 // ------------------------------------------------------------------ Render
 try {
@@ -34,17 +44,18 @@ try {
   noter(
     'Service Node (Render)',
     estApplication ? 'ENCORE EN LIGNE' : 'éteint',
-    estApplication ? `l'application répond — ${corps}` : `HTTP ${reponse.status}, ce n'est plus l'application`
+    estApplication ? `l'application répond — ${corps}` : `HTTP ${reponse.status}, ce n'est plus l'application`,
+    estApplication ? 'vif' : 'clos'
   )
 } catch (e) {
-  noter('Service Node (Render)', 'éteint', `injoignable — ${e.message}`)
+  noter('Service Node (Render)', 'éteint', `injoignable — ${e.message}`, 'clos')
 }
 
 // ------------------------------------------------- Compte de service Google
 const cheminCle = `${RACINE}/back/e-comme.json`
 
 if (!existsSync(cheminCle)) {
-  noter('Clé de service Firebase', 'fichier absent', 'back/e-comme.json a été supprimé localement')
+  noter('Clé de service Firebase', 'fichier absent', 'back/e-comme.json a été supprimé localement', 'inconnu')
 } else {
   const compte = JSON.parse(readFileSync(cheminCle, 'utf8'))
 
@@ -80,20 +91,39 @@ if (!existsSync(cheminCle)) {
     noter(
       'Clé de service Firebase',
       reponse.ok ? 'ENCORE VALIDE' : 'révoquée',
-      reponse.ok ? 'Google a délivré un jeton d’accès' : `refus Google : ${donnees.error ?? reponse.status}`
+      reponse.ok ? 'Google a délivré un jeton d’accès' : `refus Google : ${donnees.error ?? reponse.status}`,
+      reponse.ok ? 'vif' : 'clos'
     )
   } catch (e) {
-    noter('Clé de service Firebase', 'indéterminé', `contrôle impossible — ${e.message}`)
+    noter('Clé de service Firebase', 'indéterminé', `contrôle impossible — ${e.message}`, 'inconnu')
   }
 }
 
 // -------------------------------------------------------------- Cloudinary
+/*
+ * Identifiants réellement exposés, inscrits ici plutôt que lus du disque.
+ *
+ * Une première version se contentait de lire back/.env.local. Le jour où ces
+ * valeurs y ont été remplacées par celles d'un compte neuf, le contrôle a
+ * testé le nouveau compte tout en affichant « encore valides » : rassurant à
+ * l'envers, puisqu'il ne parlait plus du secret compromis.
+ */
+const CLOUDINARY_EXPOSE = { cloud: 'dffo9wq7x', cle: '822124857229833' }
+
 const cloud = lireEnv(`${RACINE}/back/.env.local`, 'CLOUDINARY_CLOUD_NAME')
 const cle = lireEnv(`${RACINE}/back/.env.local`, 'CLOUDINARY_API_KEY')
 const secret = lireEnv(`${RACINE}/back/.env.local`, 'CLOUDINARY_API_SECRET')
 
-if (!cloud || !cle || !secret) {
-  noter('Clés Cloudinary', 'fichier absent', 'back/.env.local ne porte plus ces valeurs')
+if (cle !== CLOUDINARY_EXPOSE.cle || cloud !== CLOUDINARY_EXPOSE.cloud) {
+  noter(
+    'Clés Cloudinary exposées',
+    'incontrôlable d’ici',
+    `le secret du cloud « ${CLOUDINARY_EXPOSE.cloud} » (clé ${CLOUDINARY_EXPOSE.cle}) n’est plus sur ce poste. ` +
+      'Créer un compte neuf ne révoque pas l’ancien : à constater dans sa console.',
+    'inconnu'
+  )
+} else if (!secret) {
+  noter('Clés Cloudinary exposées', 'indéterminé', 'clé présente mais secret absent du fichier', 'inconnu')
 } else {
   try {
     const reponse = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/ping`, {
@@ -102,12 +132,13 @@ if (!cloud || !cle || !secret) {
     })
 
     noter(
-      'Clés Cloudinary',
+      'Clés Cloudinary exposées',
       reponse.ok ? 'ENCORE VALIDES' : 'révoquées',
-      reponse.ok ? 'le compte a répondu à un ping authentifié' : `refus : HTTP ${reponse.status}`
+      reponse.ok ? 'le compte a répondu à un ping authentifié' : `refus : HTTP ${reponse.status}`,
+      reponse.ok ? 'vif' : 'clos'
     )
   } catch (e) {
-    noter('Clés Cloudinary', 'indéterminé', `contrôle impossible — ${e.message}`)
+    noter('Clés Cloudinary exposées', 'indéterminé', `contrôle impossible — ${e.message}`, 'inconnu')
   }
 }
 
@@ -116,16 +147,23 @@ const ancienne = lireEnv(`${RACINE}/api/.env.avant-rotation`, 'DB_URL')
 noter(
   'Ancienne base Neon',
   ancienne ? 'à contrôler séparément' : 'référence perdue',
-  ancienne ? 'lancer verif-neon.php : PHP porte le pilote PostgreSQL' : 'api/.env.avant-rotation absent'
+  ancienne ? 'lancer verifier-ancienne-base.php : PHP porte le pilote PostgreSQL' : 'api/.env.avant-rotation absent',
+  'inconnu'
 )
 
 // ------------------------------------------------------------------ Rapport
+const MARQUE = { vif: '✗', clos: '✓', inconnu: '·' }
+
 console.log('')
-for (const { sujet, etat, detail } of resultats) {
-  const marque = etat.startsWith('ENCORE') ? '✗' : etat === 'indéterminé' || etat.includes('contrôler') ? '·' : '✓'
-  console.log(`${marque} ${sujet.padEnd(26)} ${etat}`)
+for (const { sujet, etat, detail, gravite } of resultats) {
+  console.log(`${MARQUE[gravite] ?? '·'} ${sujet.padEnd(26)} ${etat}`)
   console.log(`  ${detail}`)
 }
 
-const restants = resultats.filter((r) => r.etat.startsWith('ENCORE')).length
+const restants = resultats.filter((r) => r.gravite === 'vif').length
+const incertains = resultats.filter((r) => r.gravite === 'inconnu').length
+
 console.log(`\n${restants} identifiant(s) exposé(s) encore utilisable(s).`)
+if (incertains) {
+  console.log(`${incertains} point(s) non tranché(s) d’ici : un contrôle qui n’aboutit pas n’est pas une révocation.`)
+}
