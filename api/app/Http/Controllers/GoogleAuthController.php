@@ -18,8 +18,11 @@ use Symfony\Component\HttpFoundation\RedirectResponse as SymfonyRedirect;
  * de code est vérifié par Google, ce qui supprime toute confiance accordée à un
  * jeton fourni par le client.
  *
- * Conséquence côté frontend : `GoogleSignIn.vue` ne doit plus appeler Firebase
- * mais envoyer l'utilisateur vers /api/auth/google/redirect.
+ * Ces routes ne sont actuellement câblées à aucun bouton : l'écran de connexion
+ * refait d'après la maquette ne propose que l'e-mail et le mot de passe. Pour
+ * remettre le mode Google, il suffit d'envoyer l'utilisateur vers
+ * /api/auth/google/redirect et de renseigner GOOGLE_CLIENT_ID et
+ * GOOGLE_CLIENT_SECRET ; sans eux, la redirection échoue.
  */
 class GoogleAuthController extends Controller
 {

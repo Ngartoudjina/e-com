@@ -1,13 +1,20 @@
 import axios, { type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 
 /**
- * Base de l'API.
+ * Base de l'API, fixée par VITE_API_BASE.
  *
- * Configurable par VITE_API_BASE afin de pouvoir viser un backend local en
- * développement : l'instance déployée refuse l'origine localhost (CORS), ce
- * qui rendait le catalogue vide en local sans erreur visible à l'écran.
+ * Sans valeur, les appels partent en relatif, sur l'origine du site.
+ * Le repli précédent était l'URL en dur de l'ancien backend Node hébergé sur
+ * Render : une variable oubliée au déploiement envoyait silencieusement jetons
+ * et commandes vers un service tiers déclassé, dont les identifiants ont été
+ * exposés. Un repli sur sa propre origine échoue visiblement plutôt que de
+ * parler à la mauvaise machine.
  */
-export const API_BASE = import.meta.env.VITE_API_BASE || 'https://e-com-back-nxod.onrender.com'
+export const API_BASE = import.meta.env.VITE_API_BASE ?? ''
+
+if (import.meta.env.DEV && !API_BASE) {
+  console.warn('VITE_API_BASE n’est pas défini : les appels API partent en relatif.')
+}
 
 export const api = axios.create({
   baseURL: API_BASE,

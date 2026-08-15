@@ -1,13 +1,13 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_FIREBASE_API_KEY: string
-  readonly VITE_FIREBASE_AUTH_DOMAIN: string
-  readonly VITE_FIREBASE_PROJECT_ID: string
-  readonly VITE_FIREBASE_STORAGE_BUCKET: string
-  readonly VITE_FIREBASE_MESSAGING_SENDER_ID: string
-  readonly VITE_FIREBASE_APP_ID: string
-  readonly VITE_GOOGLE_CLIENT_ID: string
+  /**
+   * Base de l'API Laravel. Absente, les appels partent en relatif.
+   *
+   * Les déclarations VITE_FIREBASE_* et VITE_GOOGLE_CLIENT_ID ont disparu avec
+   * l'authentification Firebase, remplacée par Sanctum.
+   */
+  readonly VITE_API_BASE?: string
 }
 
 interface ImportMeta {
