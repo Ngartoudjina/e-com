@@ -1,570 +1,376 @@
 <template>
-  <div class="relative overflow-hidden">
-    <div class="space-y-6 relative z-10">
-      <div class="flex flex-col md:flex-row justify-center gap-4">
-        <button
-          type="button"
-          class="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200 text-indigo-700 hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-300 shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto px-4 py-3 text-sm md:text-base rounded-md border font-medium flex items-center justify-center gap-2"
-          @click="toggleAddMode"
-        >
-          <Plus class="h-4 w-4 md:h-5 md:w-5" :class="{ 'rotate-45': isFormVisible && !isManageMode }" />
-          {{ isFormVisible && !isManageMode ? 'Fermer' : 'Ajouter un produit' }}
-          <Sparkles class="h-3 w-3 md:h-4 md:w-4" />
-        </button>
-        <button
-          type="button"
-          class="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-green-100 hover:border-blue-300 shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto px-4 py-3 text-sm md:text-base rounded-md border font-medium flex items-center justify-center gap-2"
-          @click="toggleManageMode"
-        >
-          <Edit class="h-4 w-4 md:h-5 md:w-5" />
-          Gérer les produits
+  <div>
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <label class="relative w-full sm:w-80">
+        <span class="sr-only">Rechercher une pièce</span>
+        <Search class="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-ink-500" />
+        <input v-model="recherche" class="field pl-11" placeholder="Nom ou rayon" />
+      </label>
+
+      <div class="flex items-center gap-3">
+        <p data-numeric class="t-small text-ink-500">
+          {{ produitsFiltres.length }} référence{{ produitsFiltres.length > 1 ? 's' : '' }}
+        </p>
+        <button type="button" class="btn btn-primary" @click="ouvrirCreation">Nouvelle pièce</button>
+      </div>
+    </div>
+
+    <!-- ---------------------------------------------- Panneau d'édition -->
+    <section v-if="edition" class="mt-6 border border-rule bg-surface">
+      <div class="flex items-center justify-between border-b border-rule p-5">
+        <div>
+          <h2 class="t-h3">{{ edition.id ? 'Modifier la pièce' : 'Nouvelle pièce' }}</h2>
+          <p v-if="edition.id" class="t-small mt-1 text-ink-500">{{ edition.name }}</p>
+        </div>
+        <button type="button" class="btn btn-icon" aria-label="Fermer" @click="fermer">
+          <X class="size-4" />
         </button>
       </div>
 
-      <div class="space-y-6 relative z-10">
-        <div class="bg-white/80 backdrop-blur-sm shadow-2xl border-slate-200/50 rounded-xl border overflow-hidden">
-          <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-slate-200/50 p-4 md:p-6">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2 md:gap-3">
-                <div class="p-1 md:p-2 bg-indigo-100 rounded-full">
-                  <ShoppingBag class="h-4 w-4 md:h-5 md:w-5 text-indigo-600" />
-                </div>
-                <div>
-                  <h3 class="text-lg md:text-xl font-semibold text-slate-800">
-                    {{ isManageMode ? 'Gérer un produit' : 'Ajouter un nouveau produit' }}
-                  </h3>
-                  <p class="text-sm md:text-base text-slate-600">
-                    {{ isManageMode ? 'Recherchez et modifiez ou supprimez un produit' : 'Remplissez les informations ci-dessous pour créer votre produit' }}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                class="p-1 md:p-2 hover:bg-slate-100 rounded-full transition-colors"
-                @click="closeForm"
-              >
-                <X class="h-3 w-3 md:h-4 md:w-4 text-slate-400" />
-              </button>
+      <form class="space-y-6 p-5" @submit.prevent="enregistrer">
+        <div class="grid gap-5 md:grid-cols-2">
+          <label class="block">
+            <span class="t-label text-ink-500">Nom</span>
+            <input v-model="edition.name" class="field mt-3" maxlength="255" required />
+          </label>
+
+          <label class="block">
+            <span class="t-label text-ink-500">Rayon</span>
+            <input
+              v-model="edition.category"
+              class="field mt-3"
+              maxlength="120"
+              list="rayons-existants"
+              placeholder="Mailles, Vestes…"
+            />
+            <datalist id="rayons-existants">
+              <option v-for="rayon in rayons" :key="rayon" :value="rayon" />
+            </datalist>
+          </label>
+
+          <label class="block">
+            <span class="t-label text-ink-500">Prix (€)</span>
+            <input v-model.number="edition.price" type="number" min="0" step="0.01" data-numeric class="field mt-3" required />
+          </label>
+
+          <label class="block">
+            <span class="t-label text-ink-500">Stock</span>
+            <input v-model.number="edition.stock" type="number" min="0" step="1" data-numeric class="field mt-3" />
+          </label>
+        </div>
+
+        <label class="block">
+          <span class="t-label text-ink-500">Description</span>
+          <textarea v-model="edition.description" class="field mt-3 min-h-28 py-3" maxlength="5000" />
+        </label>
+
+        <div>
+          <span class="t-label text-ink-500">Visuel</span>
+          <p class="t-small mt-1 text-ink-500">Image ou vidéo, 10 Mo au plus. Une pièce sans visuel ne peut pas être créée.</p>
+
+          <div class="mt-3 flex flex-wrap items-start gap-5">
+            <label
+              class="flex h-32 w-full cursor-pointer items-center justify-center border border-dashed border-rule text-center transition-colors hover:bg-rule-soft/50 sm:w-72"
+            >
+              <input type="file" accept="image/*,video/*" class="sr-only" @change="choisirMedia" />
+              <span class="t-small px-4 text-ink-500">
+                {{ fichier ? fichier.name : 'Choisir un fichier' }}
+              </span>
+            </label>
+
+            <div v-if="apercu" class="w-40 shrink-0 border border-rule">
+              <video v-if="estVideo(apercu)" :src="apercu" controls class="aspect-[3/4] w-full object-cover" />
+              <img v-else :src="apercu" alt="" class="aspect-[3/4] w-full object-cover" />
             </div>
           </div>
 
-          <div class="p-4 md:p-6">
-            <div v-if="isManageMode" class="space-y-4">
-              <div class="space-y-2">
-                <label class="text-slate-700 font-medium text-sm md:text-base block">
-                  <Search class="inline h-4 w-4 mr-1" />
-                  Rechercher un produit
-                </label>
-                <Input
-                  v-model="searchTerm"
-                  placeholder="Entrez le nom du produit..."
-                  class="border-slate-200 focus:border-blue-500 text-sm md:text-base"
-                  @update:model-value="handleSearch"
-                />
-              </div>
-
-              <div v-if="searchTerm" class="grid grid-cols-1 gap-3 md:gap-4">
-                <div
-                  v-for="product in filteredProducts"
-                  :key="product.id"
-                  class="cursor-pointer"
-                  @click="selectProduct(product)"
-                >
-                  <div class="h-full hover:shadow-lg transition-shadow duration-200 rounded-lg border border-gray-100 bg-white overflow-hidden">
-                    <div class="p-3 md:p-4">
-                      <img
-                        v-if="product.mediaUrl"
-                        :src="product.mediaUrl"
-                        :alt="product.name"
-                        class="w-full h-24 md:h-32 object-cover rounded-t-lg"
-                      />
-                      <h4 class="text-sm md:text-lg font-medium mt-1 md:mt-2">{{ product.name }}</h4>
-                      <p class="text-xs md:text-sm text-gray-600 mt-1">
-                        {{ product.description ? product.description.substring(0, 50) + '...' : 'Aucune description' }}
-                      </p>
-                      <div class="flex items-center gap-1 md:gap-2 mt-1">
-                        <DollarSign class="h-3 w-3 md:h-4 md:w-4 text-green-600" />
-                        <span class="font-semibold text-xs md:text-base">{{ product.price }} fcfa</span>
-                      </div>
-                      <div class="flex items-center gap-1 mt-1">
-                        <Star class="h-3 w-3 md:h-4 md:w-4 text-yellow-500" />
-                        <span class="text-xs md:text-sm">{{ product.rating ?? 0 }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <form @submit.prevent="handleSubmit" class="space-y-4 mt-4">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-2">
-                  <Label for="name" class="text-slate-700 font-medium text-sm md:text-base">Nom du produit</Label>
-                  <Input
-                    id="name"
-                    v-model="formData.name"
-                    placeholder="Entrez le nom du produit"
-                    :class="fieldErrors.name ? 'border-red-500' : 'border-slate-200'"
-                  />
-                  <p v-if="fieldErrors.name" class="text-red-500 text-xs">{{ fieldErrors.name }}</p>
-                </div>
-                <div class="space-y-2">
-                  <Label for="price" class="text-slate-700 font-medium text-sm md:text-base">Prix (FCFA)</Label>
-                  <div class="relative">
-                    <DollarSign class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      id="price"
-                      v-model="formData.price"
-                      type="number"
-                      placeholder="Entrez le prix"
-                      class="pl-10"
-                      :class="fieldErrors.price ? 'border-red-500' : 'border-slate-200'"
-                    />
-                  </div>
-                  <p v-if="fieldErrors.price" class="text-red-500 text-xs">{{ fieldErrors.price }}</p>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-2">
-                  <Label for="stars" class="text-slate-700 font-medium text-sm md:text-base">Évaluation (0-5)</Label>
-                  <div class="relative">
-                    <Star class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-yellow-500" />
-                    <Input
-                      id="stars"
-                      v-model="formData.stars"
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="5"
-                      placeholder="Entrez l'évaluation"
-                      class="pl-10"
-                      :class="fieldErrors.stars ? 'border-red-500' : 'border-slate-200'"
-                    />
-                  </div>
-                  <p v-if="fieldErrors.stars" class="text-red-500 text-xs">{{ fieldErrors.stars }}</p>
-                </div>
-                <div class="space-y-2">
-                  <Label for="purchases" class="text-slate-700 font-medium text-sm md:text-base">Stock</Label>
-                  <div class="relative">
-                    <Package class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      id="purchases"
-                      v-model="formData.purchases"
-                      type="number"
-                      placeholder="Entrez le stock"
-                      class="pl-10"
-                      :class="fieldErrors.purchases ? 'border-red-500' : 'border-slate-200'"
-                    />
-                  </div>
-                  <p v-if="fieldErrors.purchases" class="text-red-500 text-xs">{{ fieldErrors.purchases }}</p>
-                </div>
-              </div>
-
-              <div class="space-y-2">
-                <Label for="category" class="text-slate-700 font-medium text-sm md:text-base">Catégorie</Label>
-                <Input
-                  id="category"
-                  v-model="formData.category"
-                  placeholder="Entrez la catégorie (ex: ÉLECTRONIQUE)"
-                  @update:model-value="normalizeCategory"
-                  :class="fieldErrors.category ? 'border-red-500' : 'border-slate-200'"
-                />
-                <p v-if="fieldErrors.category" class="text-red-500 text-xs">{{ fieldErrors.category }}</p>
-              </div>
-
-              <div class="space-y-2">
-                <Label for="description" class="text-slate-700 font-medium text-sm md:text-base">Description</Label>
-                <Textarea
-                  id="description"
-                  v-model="formData.description"
-                  placeholder="Décrivez le produit..."
-                  class="min-h-24"
-                  :class="fieldErrors.description ? 'border-red-500' : 'border-slate-200'"
-                />
-                <p v-if="fieldErrors.description" class="text-red-500 text-xs">{{ fieldErrors.description }}</p>
-              </div>
-
-              <div class="space-y-2">
-                <Label for="media" class="text-slate-700 font-medium text-sm md:text-base">Image ou Vidéo</Label>
-                <label
-                  for="media"
-                  class="flex items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors"
-                >
-                  <div class="flex flex-col items-center gap-2">
-                    <Camera class="h-6 w-6 text-slate-400" />
-                    <span class="text-sm text-slate-600">
-                      {{ mediaFile ? mediaFile.name : 'Sélectionnez une image ou une vidéo' }}
-                    </span>
-                  </div>
-                </label>
-                <input
-                  id="media"
-                  type="file"
-                  accept="image/*,video/*"
-                  class="hidden"
-                  @change="handleMediaChange"
-                />
-                <div v-if="previewMedia" class="mt-4">
-                  <img
-                    v-if="!isVideoUrl(previewMedia)"
-                    :src="previewMedia"
-                    alt="Prévisualisation"
-                    class="w-full max-h-64 object-contain rounded-lg"
-                  />
-                  <video v-else :src="previewMedia" controls class="w-full max-h-64 object-contain rounded-lg" />
-                </div>
-                <div v-if="isUploading" class="w-full bg-slate-200 rounded-full h-2.5">
-                  <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-200" :style="{ width: uploadProgress + '%' }" />
-                </div>
-              </div>
-
-              <div v-if="error" class="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg">
-                <AlertCircle class="h-5 w-5" />
-                <span class="text-sm">{{ error }}</span>
-              </div>
-
-              <div class="flex flex-col md:flex-row gap-4">
-                <template v-if="!isManageMode">
-                  <button
-                    type="submit"
-                    :disabled="isUploading"
-                    class="w-full md:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 rounded-md px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2"
-                  >
-                    <Loader2 v-if="isUploading" class="h-4 w-4 animate-spin" />
-                    <template v-else>
-                      <Plus class="h-4 w-4" />
-                      Ajouter le produit
-                    </template>
-                  </button>
-                </template>
-                <template v-else>
-                  <button
-                    type="button"
-                    :disabled="isUploading || !selectedProduct"
-                    class="w-full md:w-auto bg-gradient-to-r from-blue-600 to-green-600 text-white hover:from-blue-700 hover:to-green-700 disabled:opacity-50 rounded-md px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2"
-                    @click="handleUpdate"
-                  >
-                    <Loader2 v-if="isUploading" class="h-4 w-4 animate-spin" />
-                    <template v-else>
-                      <Edit class="h-4 w-4" />
-                      Mettre à jour
-                    </template>
-                  </button>
-                  <button
-                    type="button"
-                    :disabled="!selectedProduct"
-                    class="w-full md:w-auto bg-gradient-to-r from-red-600 to-pink-600 text-white hover:from-red-700 hover:to-pink-700 disabled:opacity-50 rounded-md px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2"
-                    @click="handleDelete"
-                  >
-                    <Trash2 class="h-4 w-4" />
-                    Supprimer
-                  </button>
-                </template>
-              </div>
-            </form>
+          <div v-if="envoiMedia" class="mt-3 h-1 w-full bg-rule-soft">
+            <div class="h-1 bg-ink-900 transition-all" :style="{ width: progression + '%' }" />
           </div>
         </div>
-      </div>
+
+        <p v-if="erreurForm" class="t-small text-error" role="alert">{{ erreurForm }}</p>
+
+        <div class="flex flex-wrap items-center gap-3 border-t border-rule pt-5">
+          <button type="submit" class="btn btn-primary" :disabled="envoi">
+            {{ envoi ? 'Enregistrement…' : edition.id ? 'Mettre à jour' : 'Créer la pièce' }}
+          </button>
+          <button type="button" class="btn btn-secondary" @click="fermer">Annuler</button>
+
+          <button
+            v-if="edition.id"
+            type="button"
+            class="btn btn-danger sm:ml-auto"
+            @click="supprimer"
+          >
+            Supprimer
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ---------------------------------------------- Liste -->
+    <div v-if="chargement" class="mt-6 space-y-2">
+      <div v-for="i in 6" :key="i" class="skeleton h-16" />
+    </div>
+
+    <div v-else-if="erreur" class="mt-6 border border-rule bg-surface p-10 text-center">
+      <p class="t-body">{{ erreur }}</p>
+      <button type="button" class="btn btn-secondary mt-6" @click="charger">Réessayer</button>
+    </div>
+
+    <div v-else-if="!produitsFiltres.length" class="mt-6 border border-rule bg-surface p-12 text-center">
+      <p class="t-h3">Aucune pièce</p>
+      <p class="t-body mt-2 text-ink-500">
+        {{ recherche ? 'Aucun résultat pour cette recherche.' : 'Le catalogue est vide.' }}
+      </p>
+    </div>
+
+    <div v-else class="mt-6 overflow-x-auto border border-rule bg-surface">
+      <table class="w-full min-w-[820px] text-[13px]">
+        <thead>
+          <tr class="border-b border-rule text-left">
+            <th class="t-label px-5 py-3 font-normal text-ink-500">Pièce</th>
+            <th class="t-label px-5 py-3 font-normal text-ink-500">Rayon</th>
+            <th class="t-label px-5 py-3 text-right font-normal text-ink-500">Prix</th>
+            <th class="t-label px-5 py-3 text-right font-normal text-ink-500">Stock</th>
+            <th class="t-label px-5 py-3 text-right font-normal text-ink-500">Vendues</th>
+            <th class="px-5 py-3"><span class="sr-only">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="produit in produitsFiltres"
+            :key="produit.id"
+            class="border-b border-rule last:border-0 transition-colors hover:bg-rule-soft/50"
+          >
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-3">
+                <img
+                  v-if="produit.mediaUrl && !estVideo(produit.mediaUrl)"
+                  :src="produit.mediaUrl"
+                  alt=""
+                  loading="lazy"
+                  class="size-10 shrink-0 border border-rule object-cover"
+                />
+                <span v-else class="size-10 shrink-0 border border-rule bg-rule-soft" aria-hidden="true" />
+                <span class="block min-w-0 truncate text-ink-900">{{ produit.name }}</span>
+              </div>
+            </td>
+            <td class="px-5 py-3 text-ink-700">{{ produit.category || '—' }}</td>
+            <td data-numeric class="px-5 py-3 text-right text-ink-900">{{ formatPrix(produit.price) }}</td>
+            <td data-numeric class="px-5 py-3 text-right">
+              <span :class="(produit.stock ?? 0) === 0 ? 'text-error' : 'text-ink-700'">
+                {{ produit.stock ?? 0 }}
+              </span>
+            </td>
+            <td data-numeric class="px-5 py-3 text-right text-ink-700">{{ produit.soldCount ?? 0 }}</td>
+            <td class="px-5 py-3 text-right">
+              <button type="button" class="btn btn-sm btn-secondary" @click="ouvrirEdition(produit)">Modifier</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Plus, Star, DollarSign, Package, Camera, AlertCircle, Loader2, Sparkles, ShoppingBag, X, Edit, Trash2, Search } from 'lucide-vue-next'
-import { api } from '@/lib/api'
-import { Input, Label, Textarea } from '@/components/ui/index'
+import { Search, X } from 'lucide-vue-next'
+import { api, viderCacheApi } from '@/lib/api'
+import { formatPrix } from '@/lib/format'
 import { useToastStore } from '@/stores/toast'
 import type { Product } from '@/types'
 
-interface FormData {
+interface Edition {
+  id: string | null
   name: string
-  price: string
-  stars: string
-  purchases: string
+  category: string
+  price: number
+  stock: number
   description: string
   mediaUrl: string
-  category: string
 }
-
-const emptyForm: FormData = { name: '', price: '', stars: '', purchases: '', description: '', mediaUrl: '', category: '' }
 
 const toastStore = useToastStore()
-const isFormVisible = ref(true)
-const isManageMode = ref(false)
-const formData = ref<FormData>({ ...emptyForm })
-const mediaFile = ref<File | null>(null)
-const previewMedia = ref<string | null>(null)
-const uploadProgress = ref(0)
-const isUploading = ref(false)
-const error = ref<string | null>(null)
-const fieldErrors = ref<Record<string, string>>({})
-const searchTerm = ref('')
-const selectedProduct = ref<Product | null>(null)
-const products = ref<Product[]>([])
 
-const filteredProducts = computed(() =>
-  products.value.filter((product) => product.name.toUpperCase().includes(searchTerm.value.toUpperCase()))
+const produits = ref<Product[]>([])
+const chargement = ref(true)
+const erreur = ref<string | null>(null)
+const recherche = ref('')
+
+const edition = ref<Edition | null>(null)
+const fichier = ref<File | null>(null)
+const apercu = ref<string | null>(null)
+const envoi = ref(false)
+const envoiMedia = ref(false)
+const progression = ref(0)
+const erreurForm = ref<string | null>(null)
+
+const estVideo = (url: string) => /\.(mp4|mov|webm|mpeg)(\?|$)/i.test(url) || url.startsWith('blob:') && fichier.value?.type.startsWith('video/')
+
+const rayons = computed(() =>
+  [...new Set(produits.value.map((p) => p.category).filter(Boolean) as string[])].sort()
 )
 
-const isVideoUrl = (url: string) => /\.(mp4|mov|mpeg)$/.test(url)
-
-onMounted(async () => {
-  try {
-    const response = await api.get<{ success: boolean; products: Product[] }>('/api/admin/products')
-    products.value = response.data.products
-  } catch (err) {
-    console.error('Erreur lors de la récupération des produits:', err)
-    error.value = 'Échec de la récupération des produits.'
-  }
+const produitsFiltres = computed(() => {
+  const terme = recherche.value.trim().toLowerCase()
+  if (!terme) return produits.value
+  return produits.value.filter(
+    (p) => p.name.toLowerCase().includes(terme) || (p.category ?? '').toLowerCase().includes(terme)
+  )
 })
 
-const toggleAddMode = () => {
-  isManageMode.value = false
-  isFormVisible.value = !isFormVisible.value
-  resetForm()
+const charger = async () => {
+  chargement.value = true
+  erreur.value = null
+  try {
+    const reponse = await api.get<{ products: Product[] }>('/api/admin/products')
+    produits.value = reponse.data.products ?? []
+  } catch (e) {
+    console.error(e)
+    erreur.value = 'Le catalogue n’a pas pu être chargé.'
+  } finally {
+    chargement.value = false
+  }
 }
 
-const toggleManageMode = () => {
-  isManageMode.value = true
-  isFormVisible.value = !isFormVisible.value
-  resetForm()
+const libererApercu = () => {
+  if (apercu.value?.startsWith('blob:')) URL.revokeObjectURL(apercu.value)
 }
 
-const closeForm = () => {
-  isFormVisible.value = false
-  resetForm()
+const ouvrirCreation = () => {
+  libererApercu()
+  erreurForm.value = null
+  fichier.value = null
+  apercu.value = null
+  edition.value = { id: null, name: '', category: '', price: 0, stock: 0, description: '', mediaUrl: '' }
 }
 
-const resetForm = () => {
-  formData.value = { ...emptyForm }
-  mediaFile.value = null
-  previewMedia.value = null
-  selectedProduct.value = null
+const ouvrirEdition = (produit: Product) => {
+  libererApercu()
+  erreurForm.value = null
+  fichier.value = null
+  apercu.value = produit.mediaUrl || null
+  edition.value = {
+    id: produit.id,
+    name: produit.name,
+    category: produit.category ?? '',
+    price: Number(produit.price),
+    stock: Number(produit.stock ?? 0),
+    description: produit.description ?? '',
+    mediaUrl: produit.mediaUrl || '',
+  }
 }
 
-const normalizeCategory = () => {
-  formData.value.category = formData.value.category.toUpperCase()
+const fermer = () => {
+  libererApercu()
+  edition.value = null
+  fichier.value = null
+  apercu.value = null
 }
 
-const handleMediaChange = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  const maxSize = 10 * 1024 * 1024
+const choisirMedia = (evenement: Event) => {
+  const champ = evenement.target as HTMLInputElement
+  const choisi = champ.files?.[0]
+  if (!choisi) return
 
-  if (file.size > maxSize) {
-    error.value = 'Le fichier dépasse la limite de 10 Mo.'
+  if (choisi.size > 10 * 1024 * 1024) {
+    erreurForm.value = 'Le fichier dépasse 10 Mo.'
+    champ.value = ''
     return
   }
 
-  mediaFile.value = file
-  previewMedia.value = URL.createObjectURL(file)
-
-  if (file.type.startsWith('video/')) {
-    const video = document.createElement('video')
-    video.src = previewMedia.value
-    video.onloadedmetadata = () => {
-      if (video.duration > 60) {
-        error.value = 'La durée de la vidéo dépasse 60 secondes.'
-        clearMedia()
-      }
-      video.remove()
-    }
-    video.onerror = () => {
-      error.value = 'Erreur lors de la lecture de la vidéo.'
-      clearMedia()
-      video.remove()
-    }
-  }
+  erreurForm.value = null
+  libererApercu()
+  fichier.value = choisi
+  apercu.value = URL.createObjectURL(choisi)
 }
 
-const clearMedia = () => {
-  if (previewMedia.value) URL.revokeObjectURL(previewMedia.value)
-  mediaFile.value = null
-  previewMedia.value = null
-}
+/** Envoi du média séparé : l'API rend une URL que l'on joint ensuite à la pièce. */
+const envoyerMedia = async (choisi: File): Promise<string> => {
+  const corps = new FormData()
+  corps.append('file', choisi)
 
-const validateForm = (): boolean => {
-  const errors: Record<string, string> = {}
-  if (!formData.value.name.trim()) errors.name = 'Le nom du produit est requis'
-  if (!formData.value.price || parseFloat(formData.value.price) <= 0) errors.price = 'Le prix doit être positif'
-  if (!formData.value.stars || parseFloat(formData.value.stars) < 0 || parseFloat(formData.value.stars) > 5) {
-    errors.stars = 'Les étoiles doivent être entre 0 et 5'
-  }
-  if (!formData.value.purchases || parseInt(formData.value.purchases) < 0) {
-    errors.purchases = 'Le nombre d\'achats doit être positif'
-  }
-  if (!formData.value.description.trim()) errors.description = 'La description est requise'
-  if (!formData.value.category.trim()) errors.category = 'La catégorie est requise'
-  fieldErrors.value = errors
-  return Object.keys(errors).length === 0
-}
-
-const uploadMedia = async (file: File): Promise<string> => {
-  const form = new FormData()
-  form.append('file', file)
+  envoiMedia.value = true
+  progression.value = 0
   try {
-    const response = await api.post<{ secure_url: string; public_id: string }>('/api/upload', form, {
+    const reponse = await api.post<{ secure_url: string }>('/api/upload', corps, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress: (progressEvent) => {
-        const total = progressEvent.total || 1
-        uploadProgress.value = Math.round((progressEvent.loaded * 100) / total)
+      onUploadProgress: (evenement) => {
+        progression.value = Math.round((evenement.loaded * 100) / (evenement.total || 1))
       },
     })
-    if (!response.data.secure_url) {
-      throw new Error('URL du média non reçue du serveur')
-    }
-    return response.data.secure_url
-  } catch (err: any) {
-    throw new Error(err.response?.data?.error || 'Échec du téléchargement du média')
+    if (!reponse.data.secure_url) throw new Error('URL du média non reçue.')
+    return reponse.data.secure_url
+  } finally {
+    envoiMedia.value = false
   }
 }
 
-const buildProductData = (mediaUrl: string | undefined) => ({
-  name: formData.value.name,
-  price: parseFloat(formData.value.price),
-  description: formData.value.description,
-  rating: parseFloat(formData.value.stars) || 0,
-  stock: parseInt(formData.value.purchases) || 0,
-  category: formData.value.category.toUpperCase(),
-  ...(mediaUrl !== undefined ? { mediaUrl } : {}),
-})
+const enregistrer = async () => {
+  if (!edition.value) return
 
-const handleSubmit = async () => {
-  if (!validateForm()) return
+  erreurForm.value = null
+  envoi.value = true
 
-  let mediaUrl = formData.value.mediaUrl
-  if (mediaFile.value) {
-    error.value = null
-    isUploading.value = true
-    uploadProgress.value = 0
-    try {
-      mediaUrl = await uploadMedia(mediaFile.value)
-      formData.value.mediaUrl = mediaUrl
-    } catch (err: any) {
-      error.value = err.message
-      isUploading.value = false
-      uploadProgress.value = 0
+  try {
+    let url = edition.value.mediaUrl
+    if (fichier.value) url = await envoyerMedia(fichier.value)
+
+    if (!url) {
+      erreurForm.value = 'Un visuel est nécessaire.'
       return
-    } finally {
-      isUploading.value = false
     }
-  }
 
-  if (!mediaFile.value && !mediaUrl) {
-    error.value = 'Un média (image ou vidéo) est requis pour ajouter un produit.'
-    return
+    const charge = {
+      name: edition.value.name,
+      price: Number(edition.value.price),
+      description: edition.value.description,
+      category: edition.value.category || 'Autre',
+      stock: Number(edition.value.stock) || 0,
+      mediaUrl: url,
+    }
+
+    if (edition.value.id) {
+      await api.put(`/api/admin/products/${edition.value.id}`, charge)
+      toastStore.success('Pièce mise à jour.')
+    } else {
+      await api.post('/api/admin/products', charge)
+      toastStore.success('Pièce créée.')
+    }
+
+    // Le catalogue public est mis en cache : sans purge, la boutique
+    // continuerait d'afficher l'ancienne fiche.
+    viderCacheApi()
+    fermer()
+    await charger()
+  } catch (e: any) {
+    erreurForm.value =
+      e?.response?.data?.error ??
+      Object.values(e?.response?.data?.errors ?? {}).flat()[0] ??
+      e?.message ??
+      'L’enregistrement a échoué.'
+  } finally {
+    envoi.value = false
   }
+}
+
+const supprimer = async () => {
+  if (!edition.value?.id) return
+  if (!window.confirm(`Supprimer « ${edition.value.name} » ? Cette action est définitive.`)) return
 
   try {
-    const response = await api.post<{ message: string; productId: string; product: Product }>(
-      '/api/admin/products',
-      buildProductData(mediaUrl)
-    )
-    if (!response.data.productId) {
-      throw new Error('ID du produit non reçu du serveur')
-    }
-    const newProduct: Product = {
-      ...response.data.product,
-      rating: parseFloat(formData.value.stars) || 0,
-      stock: parseInt(formData.value.purchases) || 0,
-      category: formData.value.category.toUpperCase(),
-    }
-    products.value = [...products.value, newProduct]
-    resetForm()
-    toastStore.success('Produit ajouté avec succès!')
-  } catch (err: any) {
-    console.error('Error adding product:', err)
-    error.value = err.response?.data?.error || 'Échec de l\'ajout du produit. Veuillez réessayer.'
+    await api.delete(`/api/admin/products/${edition.value.id}`)
+    viderCacheApi()
+    fermer()
+    await charger()
+    toastStore.success('Pièce supprimée.')
+  } catch (e: any) {
+    toastStore.error(e?.response?.data?.error ?? 'La suppression a échoué.')
   }
 }
 
-const handleSearch = () => {
-  selectedProduct.value = null
-  const matches = filteredProducts.value
-  if (matches.length === 1) {
-    fillForm(matches[0])
-  }
-}
-
-const fillForm = (product: Product) => {
-  formData.value = {
-    name: product.name,
-    price: product.price.toString(),
-    stars: (product.rating ?? 0).toString(),
-    purchases: (product.stock ?? 0).toString(),
-    description: product.description ?? '',
-    mediaUrl: product.mediaUrl || '',
-    category: product.category ?? '',
-  }
-  previewMedia.value = product.mediaUrl || null
-}
-
-const selectProduct = (product: Product) => {
-  selectedProduct.value = product
-  fillForm(product)
-  mediaFile.value = null
-}
-
-const handleUpdate = async () => {
-  if (!selectedProduct.value) return
-  if (!validateForm()) return
-
-  let mediaUrl = formData.value.mediaUrl
-  if (mediaFile.value) {
-    isUploading.value = true
-    uploadProgress.value = 0
-    try {
-      mediaUrl = await uploadMedia(mediaFile.value)
-      formData.value.mediaUrl = mediaUrl
-    } catch (err: any) {
-      error.value = err.message
-      isUploading.value = false
-      uploadProgress.value = 0
-      return
-    } finally {
-      isUploading.value = false
-    }
-  }
-
-  const updatedData = {
-    ...buildProductData(mediaUrl !== selectedProduct.value.mediaUrl ? mediaUrl : undefined),
-  }
-
-  try {
-    const response = await api.put<{ message: string; product: Product }>(
-      `/api/admin/products/${selectedProduct.value.id}`,
-      updatedData
-    )
-    const updatedProduct: Product = {
-      ...response.data.product,
-      rating: parseFloat(formData.value.stars) || 0,
-      stock: parseInt(formData.value.purchases) || 0,
-      category: formData.value.category.toUpperCase(),
-    }
-    products.value = products.value.map((product) =>
-      product.id === selectedProduct.value?.id ? updatedProduct : product
-    )
-    toastStore.success('Produit mis à jour avec succès!')
-  } catch (err: any) {
-    console.error('Error updating product:', err)
-    error.value = err.response?.data?.error || 'Échec de la mise à jour du produit.'
-  }
-}
-
-const handleDelete = async () => {
-  if (!selectedProduct.value) return
-  if (!window.confirm(`Êtes-vous sûr de vouloir supprimer "${selectedProduct.value.name}" ?`)) return
-  try {
-    await api.delete(`/api/admin/products/${selectedProduct.value.id}`)
-    products.value = products.value.filter((product) => product.id !== selectedProduct.value?.id)
-    resetForm()
-    toastStore.success('Produit supprimé avec succès!')
-  } catch (err: any) {
-    console.error('Error deleting product:', err)
-    error.value = err.response?.data?.error || 'Échec de la suppression du produit.'
-  }
-}
+onMounted(charger)
 </script>

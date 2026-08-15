@@ -245,9 +245,30 @@ class AdminController extends Controller
     {
         $utilisateurs = User::latest('created_at')->get();
 
+        /*
+         * Commandes et dépenses réelles, en une seule requête agrégée plutôt
+         * qu'une par client. L'écran affichait jusqu'ici des montants inventés.
+         * Les commandes annulées et remboursées ne comptent pas comme dépense.
+         */
+        $cumuls = Order::query()
+            ->whereNotNull('uid')
+            ->whereIn('status', ['paid', 'preparing', 'shipped', 'delivered'])
+            ->selectRaw('uid, count(*) as commandes, sum(total) as depense')
+            ->groupBy('uid')
+            ->get()
+            ->keyBy('uid');
+
+        $charge = UserResource::collection($utilisateurs)->resolve();
+
+        foreach ($charge as $index => $utilisateur) {
+            $cumul = $cumuls[$utilisateur['uid']] ?? null;
+            $charge[$index]['ordersCount'] = (int) ($cumul->commandes ?? 0);
+            $charge[$index]['totalSpent'] = round((float) ($cumul->depense ?? 0), 2);
+        }
+
         return response()->json([
             'success' => true,
-            'users' => UserResource::collection($utilisateurs)->resolve(),
+            'users' => $charge,
             'count' => $utilisateurs->count(),
         ]);
     }
@@ -302,9 +323,79 @@ class AdminController extends Controller
                     ->groupBy('category')
                     ->pluck('total', 'category'),
             ],
+            'ventes' => $this->ventes(),
             'timestamp' => now()->toIso8601String(),
         ];
         }));
+    }
+
+    /**
+     * Chiffres de vente réels.
+     *
+     * L'écran d'analyse affichait des montants écrits en dur — un revenu
+     * inventé, un nombre de visiteurs qui n'a jamais été mesuré. Mieux vaut
+     * peu de chiffres exacts que beaucoup de chiffres faux.
+     *
+     * Les commandes annulées et remboursées sortent du chiffre d'affaires ;
+     * elles restent comptées à part pour ne pas disparaître de la vue.
+     */
+    private function ventes(): array
+    {
+        $encaissables = ['paid', 'preparing', 'shipped', 'delivered'];
+
+        $retenues = Order::whereIn('status', $encaissables);
+        $revenu = (float) (clone $retenues)->sum('total');
+        $nombre = (clone $retenues)->count();
+
+        /*
+         * Douze mois glissants, y compris les mois sans vente : une série
+         * trouée déformerait la courbe en rapprochant deux points éloignés.
+         */
+        $debut = now()->startOfMonth()->subMonths(11);
+
+        $parMois = Order::whereIn('status', $encaissables)
+            ->where('placed_at', '>=', $debut)
+            ->get(['placed_at', 'total'])
+            ->groupBy(fn (Order $c) => $c->placed_at?->format('Y-m'))
+            ->map(fn ($groupe) => [
+                'total' => round((float) $groupe->sum('total'), 2),
+                'commandes' => $groupe->count(),
+            ]);
+
+        $serie = [];
+        for ($i = 0; $i < 12; $i++) {
+            $mois = $debut->copy()->addMonths($i);
+            $cle = $mois->format('Y-m');
+            $serie[] = [
+                'mois' => $cle,
+                'total' => $parMois[$cle]['total'] ?? 0,
+                'commandes' => $parMois[$cle]['commandes'] ?? 0,
+            ];
+        }
+
+        return [
+            'revenu' => round($revenu, 2),
+            'commandes' => $nombre,
+            'panierMoyen' => $nombre > 0 ? round($revenu / $nombre, 2) : 0,
+            'enAttente' => Order::where('status', 'pending')->count(),
+            'annulees' => Order::whereIn('status', ['cancelled', 'refunded'])->count(),
+            'parStatut' => Order::selectRaw('status, count(*) as total')
+                ->groupBy('status')
+                ->pluck('total', 'status'),
+            'parMois' => $serie,
+            'meilleuresVentes' => Product::query()
+                ->where('sold_count', '>', 0)
+                ->orderByDesc('sold_count')
+                ->limit(5)
+                ->get(['id', 'name', 'price', 'sold_count', 'stock'])
+                ->map(fn (Product $p) => [
+                    'id' => $p->id,
+                    'nom' => $p->name,
+                    'vendus' => (int) $p->sold_count,
+                    'stock' => (int) $p->stock,
+                    'revenu' => round((float) $p->price * (int) $p->sold_count, 2),
+                ]),
+        ];
     }
 
     // ---------------------------------------------------------------- newsletter

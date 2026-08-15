@@ -7,6 +7,8 @@ export interface Product {
   description?: string
   rating?: number
   stock?: number
+  /** Cumul des ventes, renvoyé par l'API et affiché dans l'administration. */
+  soldCount?: number
   selectedColor?: string
   selectedSize?: string
   originalPrice?: number
