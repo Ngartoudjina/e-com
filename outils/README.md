@@ -60,7 +60,12 @@ Avant de conclure à une révocation, comparer l'heure locale à l'en-tête
 | Compte de service Firebase | révoqué | — | `firebase-adminsdk-fbsvc@e-com-ea8e8` ne répond plus |
 | Ancienne base Neon | révoquée | — | `password authentication failed` |
 
-Le cloud en service est désormais `fvimkhoh`, déclaré dans `api/.env`. Les
-identifiants avaient d'abord été posés dans `back/.env.local`, le fichier du
-backend Node retiré, que Laravel ne lit pas : l'envoi de visuels restait
-inopérant.
+Le cloud en service est déclaré dans `api/.env` — il n'est pas nommé ici : ce
+dépôt est public, et rien dans ces contrôles n'a besoin de le connaître. Le
+cloud compromis, lui, y figure : sans son nom, le script ne saurait pas quoi
+vérifier.
+
+Attention à l'endroit où ces identifiants sont posés. Ils ont d'abord été
+écrits dans `back/.env.local`, le fichier du backend Node retiré, que Laravel
+ne lit pas : l'envoi de visuels restait inopérant sans qu'aucune erreur ne le
+signale, `MediaService` se contentant de se déclarer non configuré.
