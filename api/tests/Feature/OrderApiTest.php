@@ -396,4 +396,30 @@ class OrderApiTest extends TestCase
             'email' => 'pas-un-email',
         ])->assertStatus(422);
     }
+
+    /**
+     * Une vente doit rafraîchir le catalogue public.
+     *
+     * Le cache n'était vidé que par les gestes d'administration : la dernière
+     * pièce d'une référence restait annoncée disponible jusqu'à cinq minutes
+     * après avoir été vendue, et le client suivant ne découvrait la rupture
+     * qu'en validant sa commande.
+     */
+    public function test_une_commande_rafraichit_le_catalogue_public(): void
+    {
+        $produit = $this->produit(['stock' => 1, 'price' => 100.0]);
+
+        // Première lecture : le catalogue entre en cache avec stock = 1.
+        $this->getJson('/api/products')->assertOk()
+            ->assertJsonPath('products.0.stock', 1);
+
+        $this->postJson('/api/orders', [
+            'items' => [['productId' => $produit->getKey(), 'quantity' => 1]],
+            'email' => 'client@exemple.fr',
+        ])->assertStatus(201);
+
+        // Seconde lecture : la rupture doit être visible immédiatement.
+        $this->getJson('/api/products')->assertOk()
+            ->assertJsonPath('products.0.stock', 0);
+    }
 }

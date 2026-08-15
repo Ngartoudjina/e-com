@@ -22,6 +22,7 @@ class OrderService
     public function __construct(
         private readonly PromoService $promos,
         private readonly SettingsService $reglages,
+        private readonly CatalogueCache $cache,
     ) {}
 
     /**
@@ -95,7 +96,7 @@ class OrderService
 
         $total = round(max(0, $sousTotal - $remise + $port), 2);
 
-        return DB::transaction(function () use ($regroupees, $client, $uid, $sousTotal, $remise, $port, $total, $mode) {
+        $commande = DB::transaction(function () use ($regroupees, $client, $uid, $sousTotal, $remise, $port, $total, $mode) {
             $commande = Order::create([
                 'reference' => Order::genererReference(),
                 'uid' => $uid,
@@ -143,6 +144,19 @@ class OrderService
 
             return $commande->load('items');
         });
+
+        /*
+         * La vente a modifié les stocks : le catalogue en cache est périmé.
+         *
+         * Sans cela, la dernière pièce d'une référence restait affichée comme
+         * disponible jusqu'à cinq minutes après avoir été vendue, et le client
+         * suivant ne découvrait la rupture qu'au moment de valider sa commande.
+         * L'invalidation est faite après la transaction : inutile de vider le
+         * cache si l'écriture échoue.
+         */
+        $this->cache->invalider();
+
+        return $commande;
     }
 
     /**
