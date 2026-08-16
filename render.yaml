@@ -1,0 +1,207 @@
+# =====================================================================
+# Déploiement — API Laravel, worker de file d'attente, et site Vue.
+#
+# Render n'a pas de runtime PHP natif : l'API passe par une image Docker
+# (api/Dockerfile). Le frontend est un site statique, servi sans serveur.
+#
+# Aucun secret ici. Les valeurs marquées `sync: false` sont saisies dans
+# l'interface de Render et ne sont jamais versionnées.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Variables partagées par l'API et le worker.
+#
+# Le worker exécute le même code : il lui faut la même base, le même
+# expéditeur de courrier et la même clé de chiffrement. Deux jeux de
+# valeurs divergeraient au premier oubli.
+# ---------------------------------------------------------------------
+envVarGroups:
+  - name: goldshop-commun
+    envVars:
+      - key: APP_NAME
+        value: GOLDSHOP
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_LOCALE
+        value: fr
+      - key: APP_FALLBACK_LOCALE
+        value: fr
+
+      # `php artisan key:generate --show` en local, puis coller la valeur.
+      # La changer plus tard rend illisible tout ce qui a été chiffré avant.
+      - key: APP_KEY
+        sync: false
+
+      # Neon. Le point d'accès « -pooler » passe par PgBouncer, qui ne
+      # supporte pas les requêtes préparées nommées : d'où EMULATE_PREPARES,
+      # sans quoi les migrations échouent en SQLSTATE[25P02].
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        sync: false
+      - key: DB_EMULATE_PREPARES
+        value: true
+
+      # Fichier plutôt que base : ce cache existe précisément pour éviter
+      # des allers-retours vers Neon ; l'y héberger n'apporterait rien.
+      # Il est propre à chaque instance et repart vide à chaque déploiement,
+      # ce qui convient à un cache de lecture.
+      - key: CACHE_STORE
+        value: file
+      - key: SESSION_DRIVER
+        value: file
+
+      # Base : la table `jobs` est le point de rendez-vous entre l'API qui
+      # met en file et le worker qui dépile.
+      - key: QUEUE_CONNECTION
+        value: database
+
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        value: 587
+      - key: MAIL_SCHEME
+        value: tls
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: GOLDSHOP
+
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+services:
+  # -------------------------------------------------------------------
+  # API
+  # -------------------------------------------------------------------
+  - type: web
+    name: goldshop-api
+    runtime: docker
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: ./api
+    region: frankfurt
+    plan: starter
+
+    # `/up` est le point de santé déclaré dans bootstrap/app.php. Il ne
+    # touche pas la base : un incident Neon ne doit pas faire redémarrer en
+    # boucle un service par ailleurs sain.
+    healthCheckPath: /up
+
+    # Les migrations tournent une fois par déploiement, avant que la
+    # nouvelle version ne reçoive du trafic. Lancées au démarrage du
+    # conteneur, chaque instance les exécuterait en parallèle.
+    preDeployCommand: php artisan migrate --force
+
+    envVars:
+      - fromGroup: goldshop-commun
+
+      - key: APP_URL
+        fromService:
+          type: web
+          name: goldshop-api
+          property: host
+
+      # Lue par config/cors.php pour n'autoriser que cette origine, et par
+      # les courriels pour construire leurs liens.
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: goldshop-site
+          property: host
+
+      - key: SANCTUM_STATEFUL_DOMAINS
+        fromService:
+          type: web
+          name: goldshop-site
+          property: host
+
+      # Facultatif : la connexion Google n'est pas proposée par l'interface
+      # actuelle. À renseigner seulement si elle est remise en service.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+  # -------------------------------------------------------------------
+  # File d'attente
+  #
+  # Les envois groupés aux abonnés passent par Mail::queue. Sans ce
+  # worker, ils s'empilent dans la table `jobs` et ne partent jamais.
+  # -------------------------------------------------------------------
+  - type: worker
+    name: goldshop-worker
+    runtime: docker
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: ./api
+    region: frankfurt
+    plan: starter
+
+    # `--max-time` fait sortir le worker au bout d'une heure ; Render le
+    # relance. Un processus PHP de longue durée finit par garder en mémoire
+    # un état qu'il vaut mieux remettre à zéro périodiquement.
+    dockerCommand: php artisan queue:work --tries=3 --backoff=60 --max-time=3600
+
+    envVars:
+      - fromGroup: goldshop-commun
+
+      # Les courriels partent d'ici : sans ces deux valeurs, leurs liens
+      # pointeraient vers localhost.
+      - key: APP_URL
+        fromService:
+          type: web
+          name: goldshop-api
+          property: host
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: goldshop-site
+          property: host
+
+  # -------------------------------------------------------------------
+  # Site
+  # -------------------------------------------------------------------
+  - type: web
+    name: goldshop-site
+    runtime: static
+    buildCommand: cd front-vue && npm ci && npm run build
+    staticPublishPath: ./front-vue/dist
+
+    envVars:
+      - key: VITE_API_BASE
+        fromService:
+          type: web
+          name: goldshop-api
+          property: host
+
+    routes:
+      # Le routeur Vue est en mode history : une URL profonde comme
+      # /catalogue n'a pas de fichier correspondant sur le disque. Sans
+      # cette règle, tout lien partagé et tout rechargement rendraient 404.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        # Vite appose une empreinte au nom des fichiers : sous un même nom,
+        # le contenu ne change jamais.
+        value: public, max-age=31536000, immutable
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

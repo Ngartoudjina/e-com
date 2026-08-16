@@ -1,0 +1,20 @@
+# Jamais dans l'image : ces fichiers portent les secrets de développement.
+.env
+.env.*
+!.env.example
+
+vendor/
+node_modules/
+
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*
+
+tests/
+phpunit.xml
+.phpunit.result.cache
+.git/
+.gitignore
+README.md
