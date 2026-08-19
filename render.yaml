@@ -59,10 +59,13 @@ envVarGroups:
       - key: SESSION_DRIVER
         value: file
 
-      # Base : la table `jobs` est le point de rendez-vous entre l'API qui
-      # met en file et le worker qui dépile.
+      # `sync` et non `database` : sans worker — Render n'en offre pas en
+      # gratuit — les tâches mises en file resteraient dans la table `jobs`
+      # sans que personne ne les dépile, et aucun courriel ne partirait.
+      # En `sync`, l'envoi a lieu dans la requête. Voir la note sur la file
+      # d'attente plus bas.
       - key: QUEUE_CONNECTION
-        value: database
+        value: sync
 
       - key: MAIL_MAILER
         value: smtp
@@ -98,20 +101,32 @@ services:
     dockerfilePath: ./api/Dockerfile
     dockerContext: ./api
     region: frankfurt
-    plan: starter
+
+    # Offre gratuite : le conteneur s'endort après une période sans trafic,
+    # et le visiteur suivant attend son réveil — de l'ordre de la minute
+    # pour une image PHP. Passer à `starter` le jour où la boutique reçoit
+    # de vrais clients : le réveil à froid coûte plus en ventes perdues
+    # qu'en abonnement.
+    plan: free
 
     # `/up` est le point de santé déclaré dans bootstrap/app.php. Il ne
     # touche pas la base : un incident Neon ne doit pas faire redémarrer en
     # boucle un service par ailleurs sain.
     healthCheckPath: /up
 
-    # Les migrations tournent une fois par déploiement, avant que la
-    # nouvelle version ne reçoive du trafic. Lancées au démarrage du
-    # conteneur, chaque instance les exécuterait en parallèle.
-    preDeployCommand: php artisan migrate --force
+    # `preDeployCommand` ferait tourner les migrations avant la mise en
+    # service, mais c'est une fonction des plans payants. Elles sont donc
+    # lancées au démarrage du conteneur, par docker-entrypoint.sh, sous
+    # RUN_MIGRATIONS. Le risque habituel — plusieurs instances les exécutant
+    # en parallèle — ne se pose pas ici : l'offre gratuite n'en donne qu'une.
 
     envVars:
       - fromGroup: goldshop-commun
+
+      # Voir ci-dessus. À repasser à false le jour où les migrations
+      # reviendront dans un `preDeployCommand`.
+      - key: RUN_MIGRATIONS
+        value: true
 
       # Adresse publique de l'API, https:// compris.
       - key: APP_URL
@@ -138,35 +153,24 @@ services:
         sync: false
 
   # -------------------------------------------------------------------
-  # File d'attente
+  # Pas de worker de file d'attente.
   #
-  # Les envois groupés aux abonnés passent par Mail::queue. Sans ce
-  # worker, ils s'empilent dans la table `jobs` et ne partent jamais.
+  # Render ne propose aucune offre gratuite pour les processus d'arrière-
+  # plan. QUEUE_CONNECTION vaut donc `sync` dans le groupe commun : les
+  # courriels partent dans la requête elle-même, au lieu de s'empiler dans
+  # une table que personne ne dépile.
+  #
+  # Conséquence à connaître : la campagne aux abonnés
+  # (POST /api/send-bulk-email) boucle sur toute la liste en synchrone et
+  # expirera passé quelques dizaines d'inscrits. Les courriels unitaires —
+  # vérification d'adresse, réinitialisation de mot de passe — ne posent
+  # aucun problème.
+  #
+  # Pour rétablir la file : remettre QUEUE_CONNECTION à `database` et
+  # redéclarer ici un service `worker` en plan payant, avec
+  # `dockerCommand: php artisan queue:work --tries=3 --backoff=60
+  # --max-time=3600`.
   # -------------------------------------------------------------------
-  - type: worker
-    name: goldshop-worker
-    runtime: docker
-    dockerfilePath: ./api/Dockerfile
-    dockerContext: ./api
-    region: frankfurt
-    plan: starter
-
-    # `--max-time` fait sortir le worker au bout d'une heure ; Render le
-    # relance. Un processus PHP de longue durée finit par garder en mémoire
-    # un état qu'il vaut mieux remettre à zéro périodiquement.
-    dockerCommand: php artisan queue:work --tries=3 --backoff=60 --max-time=3600
-
-    envVars:
-      - fromGroup: goldshop-commun
-
-      # Les courriels partent d'ici : sans ces deux valeurs, leurs liens
-      # pointeraient vers localhost.
-      # Adresse publique de l'API, https:// compris.
-      - key: APP_URL
-        sync: false
-      # Origine du site, https:// compris.
-      - key: FRONTEND_URL
-        sync: false
 
   # -------------------------------------------------------------------
   # Site

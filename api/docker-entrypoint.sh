@@ -20,8 +20,16 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# Les migrations ne sont pas lancées ici : avec plusieurs instances, chacune
-# les exécuterait en même temps. Elles appartiennent à l'étape de
-# pré-déploiement (voir preDeployCommand dans render.yaml).
+# Les migrations appartiennent normalement à une étape de pré-déploiement :
+# lancées au démarrage du conteneur, plusieurs instances les exécuteraient en
+# parallèle. Mais `preDeployCommand` est réservé aux plans payants de Render.
+#
+# Sous RUN_MIGRATIONS, elles ont donc lieu ici. Ce n'est acceptable que parce
+# que l'offre gratuite ne donne qu'une seule instance. Repasser au
+# pré-déploiement dès que le service monte en charge.
+if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
+    echo "Migrations en cours…"
+    php artisan migrate --force
+fi
 
 exec "$@"

@@ -1,7 +1,7 @@
 # Mise en production
 
-Trois services, décrits par `render.yaml` : l'API Laravel, un worker de file
-d'attente, et le site Vue en statique.
+Deux services, décrits par `render.yaml` : l'API Laravel et le site Vue en
+statique. **Aucun n'est payant.**
 
 Render n'a pas de runtime PHP natif — l'API passe donc par une image Docker
 (`api/Dockerfile`), bâtie sur FrankenPHP. `artisan serve` n'a pas sa place en
@@ -27,9 +27,11 @@ connexion actuel ne propose pas Google.
 
 ## Ce que le blueprint règle déjà
 
-**Les migrations** tournent en `preDeployCommand`, une fois par déploiement,
-avant que la nouvelle version ne reçoive du trafic. Lancées au démarrage du
-conteneur, chaque instance les exécuterait en parallèle.
+**Les migrations** sont lancées au démarrage du conteneur, sous
+`RUN_MIGRATIONS`. Leur place normale est un `preDeployCommand`, mais c'est une
+fonction des plans payants. Ce n'est acceptable que parce que l'offre gratuite
+ne donne qu'une seule instance : avec plusieurs, chacune les exécuterait en
+parallèle.
 
 **Les caches** de configuration, de routes et de vues sont construits au
 démarrage du conteneur, pas à la construction de l'image : `config:cache` fige
@@ -50,9 +52,17 @@ navigateur.
 préparées nommées. `DB_EMULATE_PREPARES=true` est indispensable : sans lui les
 migrations échouent en `SQLSTATE[25P02]`.
 
-**Le worker n'est pas décoratif.** Les envois groupés aux abonnés passent par
-`Mail::queue`. Sans lui, ils s'empilent dans la table `jobs` et ne partent
-jamais — sans qu'aucune erreur ne le signale.
+**Pas de worker, donc pas de file d'attente.** Render ne propose aucune offre
+gratuite pour les processus d'arrière-plan. `QUEUE_CONNECTION` vaut donc
+`sync` : les courriels partent dans la requête elle-même.
+
+Conséquence à connaître : la campagne aux abonnés boucle sur toute la liste en
+synchrone et **expirera passé quelques dizaines d'inscrits**. Les courriels
+unitaires — vérification d'adresse, réinitialisation de mot de passe — ne
+posent aucun problème.
+
+Pour rétablir la file : `QUEUE_CONNECTION=database`, et redéclarer un service
+`worker` en plan payant.
 
 **Le cache est en fichier**, propre à chaque instance et remis à zéro à chaque
 déploiement. C'est voulu : ce cache existe pour éviter des allers-retours vers
@@ -90,8 +100,8 @@ secrets d'environnement, et sert une application qui n'a plus de base.
 | `DB_URL` | groupe commun | chaîne Neon complète |
 | `MAIL_HOST` `MAIL_USERNAME` `MAIL_PASSWORD` `MAIL_FROM_ADDRESS` | groupe commun | votre fournisseur SMTP |
 | `CLOUDINARY_*` | groupe commun | les trois valeurs du cloud en service |
-| `APP_URL` | API **et** worker | `https://goldshop-api.onrender.com` |
-| `FRONTEND_URL` | API **et** worker | `https://goldshop-site.onrender.com` |
+| `APP_URL` | API | `https://goldshop-api.onrender.com` |
+| `FRONTEND_URL` | API | `https://goldshop-site.onrender.com` |
 | `VITE_API_BASE` | site | `https://goldshop-api.onrender.com` |
 
 Les trois dernières s'écrivent **avec `https://`**. Render sait bien injecter
@@ -106,3 +116,16 @@ justement un domaine nu.
 Les adresses ne sont connues qu'après la première création des services. Le
 premier déploiement échouera donc côté site — renseignez les trois valeurs,
 puis relancez.
+
+## Le prix du gratuit
+
+**L'API s'endort** après une période sans trafic. Le visiteur suivant attend
+son réveil — de l'ordre de la minute pour une image Docker PHP. C'est la
+première impression de la boutique qui en pâtit.
+
+Passer `plan: free` à `plan: starter` sur `goldshop-api` le jour où de vrais
+clients arrivent : le réveil à froid coûte plus cher en ventes perdues qu'en
+abonnement. Remettre alors les migrations dans un `preDeployCommand` et
+`RUN_MIGRATIONS` à `false`.
+
+Le site statique, lui, est gratuit sans réserve ni réveil.
