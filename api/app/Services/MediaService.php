@@ -6,6 +6,7 @@ use Cloudinary\Api\Upload\UploadApi;
 use Cloudinary\Configuration\Configuration;
 use Illuminate\Http\UploadedFile;
 use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Encoders\WebpEncoder;
 use Intervention\Image\ImageManager;
 use RuntimeException;
 
@@ -101,13 +102,19 @@ class MediaService
 
     private function optimiser(UploadedFile $fichier): string
     {
-        $image = (new ImageManager(new Driver()))->read($fichier->getRealPath());
+        /*
+         * API d'Intervention Image 4 : `read()` et `toWebp()` appartenaient
+         * à la version 3. Le code les appelait encore, mais le chemin n'était
+         * jamais emprunté faute d'identifiants Cloudinary : le premier envoi
+         * réel a échoué en « Call to undefined method ».
+         */
+        $image = (new ImageManager(new Driver()))->decodePath($fichier->getRealPath());
 
         // `scaleDown` respecte le ratio et n'agrandit jamais une image plus petite,
         // équivalent du `fit: 'inside', withoutEnlargement: true` de sharp.
         $image->scaleDown(self::LARGEUR_MAX, self::HAUTEUR_MAX);
 
-        return (string) $image->toWebp(self::QUALITE);
+        return (string) $image->encode(new WebpEncoder(quality: self::QUALITE));
     }
 
     private function versDataUri(string $binaire, string $type): string
