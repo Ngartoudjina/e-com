@@ -120,7 +120,7 @@ const description = computed(
 const statut = computed(() => {
   const stock = props.produit.stock ?? 0
   if (stock <= 0) return { libelle: 'Épuisé', classe: 'text-error' }
-  if (stock <= 3) return { libelle: `Plus que ${stock} pièces`, classe: 'text-warning' }
+  if (stock <= 3) return { libelle: `Plus que ${stock} pièce${stock > 1 ? 's' : ''}`, classe: 'text-warning' }
   return { libelle: 'En stock · expédié sous 24 h', classe: 'text-success' }
 })
 </script>

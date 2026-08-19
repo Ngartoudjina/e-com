@@ -13,9 +13,23 @@ import { decalagePour, DUREE, gsap, mouvementReduit, COURBE } from './motion'
  */
 const suivis = new WeakMap<Element, { observateur: IntersectionObserver; animation?: gsap.core.Tween }>()
 
+/**
+ * Largeur en deçà de laquelle le contenu s'affiche sans mise en scène.
+ *
+ * Deux raisons. La révélation pose `opacity: 0` puis s'en remet à
+ * l'observateur : s'il ne se déclenche pas, le contenu reste invisible, et
+ * c'est sur téléphone que ce risque est le plus concret — défilement rapide,
+ * éléments plus hauts que la fenêtre. Ensuite, faire apparaître chaque carte
+ * l'une après l'autre allonge la perception du chargement là où l'écran n'en
+ * montre que deux à la fois : ce qui donne du rythme sur un grand écran
+ * ressemble à de la lenteur sur un petit.
+ */
+const LARGEUR_MINIMALE = 768
+
 export const vReveal: Directive<HTMLElement, number | undefined> = {
   mounted(el, binding) {
     if (mouvementReduit()) return
+    if (window.innerWidth < LARGEUR_MINIMALE) return
 
     // État de départ posé immédiatement : sans cela l'élément clignote
     // entre le rendu et le déclenchement de l'observateur.

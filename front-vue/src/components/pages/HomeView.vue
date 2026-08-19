@@ -6,7 +6,7 @@
     <main>
       <!-- ---------------------------------------------- Ouverture -->
       <section class="border-b border-rule bg-surface">
-        <div class="mx-auto grid max-w-[1200px] items-center gap-10 px-5 py-16 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-24">
+        <div class="mx-auto grid max-w-[1200px] items-center gap-8 px-5 py-10 sm:gap-10 sm:py-16 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-24">
           <div>
             <p v-reveal class="t-label text-ink-500">Collection automne — hiver</p>
             <h1 v-reveal="1" class="t-screen-title mt-5 text-ink-900">
@@ -45,7 +45,7 @@
       </section>
 
       <!-- ---------------------------------------------- Sélection -->
-      <section class="mx-auto max-w-[1200px] px-5 py-16 lg:px-8 lg:py-24">
+      <section class="mx-auto max-w-[1200px] px-5 py-12 sm:py-16 lg:px-8 lg:py-24">
         <div class="flex flex-wrap items-baseline justify-between gap-4">
           <h2 v-reveal class="t-h1 text-ink-900">Nouveautés</h2>
           <RouterLink to="/catalogue" class="t-small text-ink-700 underline underline-offset-4 hover:text-ink-900">
@@ -53,7 +53,7 @@
           </RouterLink>
         </div>
 
-        <div v-if="chargement" class="mt-10 grid grid-cols-2 gap-x-5 gap-y-10 lg:grid-cols-4 lg:gap-x-8">
+        <div v-if="chargement" class="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:mt-10 sm:gap-x-5 sm:gap-y-10 lg:grid-cols-4 lg:gap-x-8">
           <div v-for="i in 4" :key="i" class="skeleton aspect-[3/4]" />
         </div>
 
@@ -63,7 +63,7 @@
           Le catalogue est en cours de constitution.
         </p>
 
-        <div v-else class="mt-10 grid grid-cols-2 gap-x-5 gap-y-10 lg:grid-cols-4 lg:gap-x-8">
+        <div v-else class="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:mt-10 sm:gap-x-5 sm:gap-y-10 lg:grid-cols-4 lg:gap-x-8">
           <ProductCard
             v-for="(produit, index) in selection"
             :key="produit.id"
@@ -77,10 +77,10 @@
 
       <!-- ---------------------------------------------- Rayons -->
       <section v-if="rayons.length" class="border-y border-rule bg-surface">
-        <div class="mx-auto max-w-[1200px] px-5 py-16 lg:px-8 lg:py-24">
+        <div class="mx-auto max-w-[1200px] px-5 py-12 sm:py-16 lg:px-8 lg:py-24">
           <h2 v-reveal class="t-h1 text-ink-900">Par rayon</h2>
 
-          <ul class="mt-10 grid gap-px bg-rule sm:grid-cols-2 lg:grid-cols-4">
+          <ul class="mt-8 grid gap-px bg-rule sm:mt-10 sm:grid-cols-2 lg:grid-cols-4">
             <li v-for="(rayon, index) in rayons" :key="rayon.nom" v-reveal="index">
               <RouterLink
                 :to="{ path: '/catalogue', query: { categorie: rayon.nom } }"
@@ -95,8 +95,8 @@
       </section>
 
       <!-- ---------------------------------------------- Engagements -->
-      <section class="mx-auto max-w-[1200px] px-5 py-16 lg:px-8 lg:py-24">
-        <ul class="grid gap-10 sm:grid-cols-3">
+      <section class="mx-auto max-w-[1200px] px-5 py-12 sm:py-16 lg:px-8 lg:py-24">
+        <ul class="grid gap-8 sm:grid-cols-3 sm:gap-10">
           <li v-for="(point, index) in engagements" :key="point.titre" v-reveal="index">
             <h3 class="t-h3 text-ink-900">{{ point.titre }}</h3>
             <p class="t-body mt-3 text-ink-700">{{ point.detail }}</p>

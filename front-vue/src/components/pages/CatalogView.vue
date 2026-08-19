@@ -5,7 +5,7 @@
 
     <main class="container-page pb-24">
       <!-- Fil d'Ariane -->
-      <nav aria-label="Fil d'Ariane" class="t-small flex items-center gap-2 pt-8 text-ink-500">
+      <nav aria-label="Fil d'Ariane" class="t-small flex items-center gap-2 pt-5 text-ink-500 lg:pt-8">
         <RouterLink to="/" class="hover:text-ink-900">Accueil</RouterLink>
         <span aria-hidden="true">/</span>
         <RouterLink to="/catalogue" class="hover:text-ink-900">Catalogue</RouterLink>
@@ -18,7 +18,7 @@
         en mobile, le titre en Cormorant 34 suivi du seul décompte, la promesse
         étant reléguée pour ne pas repousser la grille sous la ligne de flottaison.
       -->
-      <header class="grid-page mt-8 items-end lg:mt-12">
+      <header class="grid-page mt-5 items-end lg:mt-12">
         <h1 class="t-screen-title col-span-4 lg:col-span-7">
           {{ categorieActive ?? 'Toutes les pièces' }}
         </h1>
@@ -32,7 +32,7 @@
       </header>
 
       <!-- Rangée de filtres mobile : puces horizontales, feuille au clic. -->
-      <div class="mt-6 flex items-center gap-2 overflow-x-auto pb-1 lg:hidden">
+      <div class="mt-5 flex items-center gap-2 overflow-x-auto pb-1 lg:hidden">
         <button
           type="button"
           class="chip shrink-0"
@@ -56,7 +56,7 @@
         </button>
       </div>
 
-      <div class="mt-12 border-t border-rule pt-8 lg:mt-16">
+      <div class="mt-6 border-t border-rule pt-6 lg:mt-16 lg:pt-8">
         <div class="grid-page">
           <!-- Colonne de filtres : 3 colonnes sur 12, masquée en mobile -->
           <div class="col-span-4 hidden lg:col-span-3 lg:block">
@@ -138,7 +138,7 @@
             </div>
 
             <!-- Chargement -->
-            <div v-if="chargement" class="mt-8 grid grid-cols-2 gap-8 lg:grid-cols-3">
+            <div v-if="chargement" class="mt-6 grid grid-cols-2 gap-4 sm:gap-8 lg:mt-8 lg:grid-cols-3">
               <div v-for="i in 6" :key="i">
                 <div class="skeleton aspect-[3/4]" />
                 <div class="skeleton mt-4 h-4 w-2/3" />
@@ -160,7 +160,7 @@
             </div>
 
             <!-- Grille -->
-            <div v-else-if="vue === 'grille'" class="mt-8 grid grid-cols-2 gap-x-8 gap-y-12 lg:grid-cols-3">
+            <div v-else-if="vue === 'grille'" class="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-8 sm:gap-y-12 lg:mt-8 lg:grid-cols-3">
               <ProductCard
                 v-for="(produit, index) in produitsAffiches"
                 :key="produit.id"

@@ -99,13 +99,18 @@
                   Guide des tailles &amp; mensurations
                 </button>
               </div>
-              <div class="mt-4 flex flex-wrap gap-2">
+              <!--
+                Grille de cinq colonnes sur mobile, largeur fixe au-delà.
+                En `flex-wrap`, quatre tailles de 68 px tenaient sur la
+                première ligne et la cinquième restait seule en dessous.
+              -->
+              <div class="mt-4 grid grid-cols-5 gap-2 sm:flex sm:flex-wrap">
                 <button
                   v-for="taille in tailles"
                   :key="taille.valeur"
                   type="button"
                   :disabled="taille.indisponible"
-                  class="flex h-12 w-[68px] items-center justify-center border text-[15px] transition-colors duration-[200ms]"
+                  class="flex h-12 items-center justify-center border text-[15px] transition-colors duration-[200ms] sm:w-[68px]"
                   :class="classeTaille(taille)"
                   :aria-pressed="taille.valeur === tailleChoisie"
                   @click="choisirTaille(taille.valeur)"
@@ -133,10 +138,12 @@
                 </button>
               </div>
 
-              <button type="button" class="btn btn-lg btn-primary flex-1" :disabled="epuise" @click="ajouter">
-                Ajouter au panier
-              </button>
-
+              <!--
+                Le favori accompagne le sélecteur de quantité, et l'appel à
+                l'action prend toute la largeur sous eux : à trois de front
+                sur 390 px, c'est le cœur en dernier qui basculait seul à la
+                ligne, et le bouton d'achat se retrouvait à l'étroit.
+              -->
               <button
                 type="button"
                 class="btn btn-icon"
@@ -146,6 +153,15 @@
                 @click="favori = !favori"
               >
                 <Heart class="size-4" :class="favori ? 'fill-current' : ''" />
+              </button>
+
+              <button
+                type="button"
+                class="btn btn-lg btn-primary w-full sm:w-auto sm:flex-1"
+                :disabled="epuise"
+                @click="ajouter"
+              >
+                Ajouter au panier
               </button>
             </div>
 
@@ -241,7 +257,13 @@
     </div>
 
     <SiteFooter />
-    <BottomTabBar />
+
+    <!--
+      Pas de barre d'onglets sur cet écran : elle est `sticky bottom-0` comme
+      la barre d'action, les deux se disputaient le bas de la fenêtre et le
+      bloc d'achat finissait tronqué. Sur l'écran qui vend, l'action prime
+      sur la navigation — que l'en-tête et le pied de page offrent toujours.
+    -->
   </div>
 </template>
 
@@ -252,7 +274,6 @@ import { Heart, Minus, Plus, RotateCcw, ShieldCheck, Star, Truck } from 'lucide-
 import AnnouncementBar from '@/components/common/AnnouncementBar.vue'
 import SiteHeader from '@/components/common/SiteHeader.vue'
 import SiteFooter from '@/components/common/SiteFooter.vue'
-import BottomTabBar from '@/components/common/BottomTabBar.vue'
 import ProductGallery from '@/components/product/ProductGallery.vue'
 import ProductBadge, { type VarianteBadge } from '@/components/catalog/ProductBadge.vue'
 import { formatPrix, formatFractionne } from '@/lib/format'
@@ -331,7 +352,7 @@ const statut = computed(() => {
   if (stock <= 0) return { libelle: 'Épuisé', classe: 'text-error' }
   if (stock <= 3) {
     const suffixe = tailleChoisie.value ? ` en taille ${tailleChoisie.value}` : ''
-    return { libelle: `Plus que ${stock} pièces${suffixe}`, classe: 'text-warning' }
+    return { libelle: `Plus que ${stock} pièce${stock > 1 ? 's' : ''}${suffixe}`, classe: 'text-warning' }
   }
   return { libelle: 'En stock · expédié sous 24 h', classe: 'text-success' }
 })

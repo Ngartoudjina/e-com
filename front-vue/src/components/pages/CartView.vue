@@ -283,7 +283,7 @@ const ligneId = (article: ProductWithDetails) =>
 const statut = (article: ProductWithDetails) => {
   const stock = article.stock ?? 0
   if (stock <= 0) return { libelle: 'Épuisé', classe: 'text-error' }
-  if (stock <= 3) return { libelle: `Plus que ${stock} pièces`, classe: 'text-warning' }
+  if (stock <= 3) return { libelle: `Plus que ${stock} pièce${stock > 1 ? 's' : ''}`, classe: 'text-warning' }
   return { libelle: 'En stock', classe: 'text-success' }
 }
 

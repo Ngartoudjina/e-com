@@ -43,10 +43,18 @@
         Épuisé
       </span>
 
-      <!-- Survol : nuancier + ajout rapide, sur un voile dégradé -->
+      <!--
+        Survol : nuancier + ajout rapide, sur un voile dégradé.
+
+        Masqué sur les appareils sans survol. Il y restait invisible en
+        permanence — donc inatteignable au doigt — et l'afficher d'office
+        aurait encombré des cartes de 170 px de large. Sur tactile, la carte
+        entière mène à la fiche, où l'achat se fait au complet ; le favori,
+        lui, reste accessible en haut à droite.
+      -->
       <div
         v-if="!epuise"
-        class="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-ink-900/45 to-transparent p-3 opacity-0 transition-all duration-[200ms] ease-[cubic-bezier(.2,.8,.2,1)] group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100"
+        class="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-ink-900/45 to-transparent p-3 opacity-0 transition-all duration-[200ms] ease-[cubic-bezier(.2,.8,.2,1)] group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 [@media(hover:none)]:hidden"
       >
         <div v-if="coloris.length" class="mb-3 flex items-center gap-2">
           <span

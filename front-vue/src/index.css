@@ -228,18 +228,47 @@
     letter-spacing: -0.02em; /* -2% */
   }
 
+  /*
+   * Les titres d'affichage partent de la taille mobile et grandissent sur
+   * grand écran, comme `t-screen-title`. Figés à leur valeur desktop, ils
+   * occupaient un tiers de la hauteur d'un téléphone : « Nouveautés » en
+   * 56 px sur 390 px de large repoussait les produits sous la ligne de
+   * flottaison. Les variantes Tailwind ne peuvent pas préfixer une classe
+   * de `@layer components` — d'où ces media queries.
+   */
   .t-h1 {
     font-family: var(--font-display);
-    font-size: 56px;
+    font-size: 32px;
     font-weight: 400;
-    line-height: 1.1;
+    line-height: 1.15;
   }
 
   .t-h2 {
     font-family: var(--font-display);
-    font-size: 36px;
+    font-size: 26px;
     font-weight: 400;
     line-height: 1.2;
+  }
+
+  @media (min-width: 768px) {
+    .t-h1 {
+      font-size: 44px;
+      line-height: 1.1;
+    }
+
+    .t-h2 {
+      font-size: 32px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .t-h1 {
+      font-size: 56px;
+    }
+
+    .t-h2 {
+      font-size: 36px;
+    }
   }
 
   .t-h3 {

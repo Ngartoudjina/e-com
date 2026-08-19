@@ -10,11 +10,21 @@
   >
     <ul class="grid grid-cols-4">
       <li v-for="onglet in onglets" :key="onglet.libelle">
+        <!--
+          L'onglet actif se marque à l'encre et par un filet, non par le bleu
+          d'action : celui-ci désigne les liens et les commandes, et l'employer
+          ici donnait à une boutique de mode l'allure d'un gabarit générique.
+        -->
         <RouterLink
           :to="onglet.to"
-          class="flex min-h-[var(--size-touch)] flex-col items-center justify-center gap-1 py-2 transition-colors duration-[120ms]"
-          :class="estActif(onglet) ? 'text-action' : 'text-ink-700'"
+          class="relative flex min-h-[var(--size-touch)] flex-col items-center justify-center gap-1 py-2 transition-colors duration-[120ms]"
+          :class="estActif(onglet) ? 'text-ink-900' : 'text-ink-500'"
         >
+          <span
+            v-if="estActif(onglet)"
+            aria-hidden="true"
+            class="absolute inset-x-0 top-0 mx-auto h-px w-8 bg-ink-900"
+          />
           <span class="relative">
             <component :is="onglet.icone" class="size-5" />
             <span
