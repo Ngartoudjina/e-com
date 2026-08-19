@@ -6,6 +6,12 @@
 #
 # Aucun secret ici. Les valeurs marquées `sync: false` sont saisies dans
 # l'interface de Render et ne sont jamais versionnées.
+#
+# Les trois adresses publiques — APP_URL, FRONTEND_URL, VITE_API_BASE — sont
+# elles aussi saisies à la main bien qu'elles n'aient rien de secret :
+# `fromService … property: host` rend un nom d'hôte nu, sans « https:// ».
+# Une base d'API sans schéma serait lue comme un chemin relatif, et une
+# origine sans schéma ne correspondrait à aucun en-tête Origin.
 # =====================================================================
 
 # ---------------------------------------------------------------------
@@ -107,20 +113,17 @@ services:
     envVars:
       - fromGroup: goldshop-commun
 
+      # Adresse publique de l'API, https:// compris.
       - key: APP_URL
-        fromService:
-          type: web
-          name: goldshop-api
-          property: host
+        sync: false
 
-      # Lue par config/cors.php pour n'autoriser que cette origine, et par
-      # les courriels pour construire leurs liens.
+      # Origine du site, https:// compris. Lue par config/cors.php pour
+      # n'autoriser qu'elle, et par les courriels pour leurs liens.
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: goldshop-site
-          property: host
+        sync: false
 
+      # Sanctum attend un domaine nu, sans schéma : `property: host`
+      # convient ici, contrairement aux trois adresses ci-dessus.
       - key: SANCTUM_STATEFUL_DOMAINS
         fromService:
           type: web
@@ -158,16 +161,12 @@ services:
 
       # Les courriels partent d'ici : sans ces deux valeurs, leurs liens
       # pointeraient vers localhost.
+      # Adresse publique de l'API, https:// compris.
       - key: APP_URL
-        fromService:
-          type: web
-          name: goldshop-api
-          property: host
+        sync: false
+      # Origine du site, https:// compris.
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: goldshop-site
-          property: host
+        sync: false
 
   # -------------------------------------------------------------------
   # Site
@@ -179,11 +178,9 @@ services:
     staticPublishPath: ./front-vue/dist
 
     envVars:
+      # Adresse publique de l'API, https:// compris.
       - key: VITE_API_BASE
-        fromService:
-          type: web
-          name: goldshop-api
-          property: host
+        sync: false
 
     routes:
       # Le routeur Vue est en mode history : une URL profonde comme

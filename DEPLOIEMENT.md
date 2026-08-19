@@ -81,3 +81,28 @@ Attendez-vous à un ou deux ajustements au premier `docker build`.
 Le service Node `e-com-back` doit être suspendu — il tourne encore, avec ses
 secrets d'environnement, et sert une application qui n'a plus de base.
 `outils/verifier-revocation.mjs` le confirmera.
+
+## Les valeurs à saisir dans Render
+
+| Clé | Où | Exemple |
+|---|---|---|
+| `APP_KEY` | groupe commun | sortie de `php artisan key:generate --show` |
+| `DB_URL` | groupe commun | chaîne Neon complète |
+| `MAIL_HOST` `MAIL_USERNAME` `MAIL_PASSWORD` `MAIL_FROM_ADDRESS` | groupe commun | votre fournisseur SMTP |
+| `CLOUDINARY_*` | groupe commun | les trois valeurs du cloud en service |
+| `APP_URL` | API **et** worker | `https://goldshop-api.onrender.com` |
+| `FRONTEND_URL` | API **et** worker | `https://goldshop-site.onrender.com` |
+| `VITE_API_BASE` | site | `https://goldshop-api.onrender.com` |
+
+Les trois dernières s'écrivent **avec `https://`**. Render sait bien injecter
+l'adresse d'un service dans un autre, mais `property: host` rend un nom d'hôte
+nu : une base d'API sans schéma serait lue comme un chemin relatif, et une
+origine sans schéma ne correspondrait à aucun en-tête `Origin` — l'API se
+fermerait au navigateur sans message clair.
+
+`SANCTUM_STATEFUL_DOMAINS` reste déduite automatiquement : Sanctum attend
+justement un domaine nu.
+
+Les adresses ne sont connues qu'après la première création des services. Le
+premier déploiement échouera donc côté site — renseignez les trois valeurs,
+puis relancez.
