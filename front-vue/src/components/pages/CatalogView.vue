@@ -32,7 +32,7 @@
       </header>
 
       <!-- Rangée de filtres mobile : puces horizontales, feuille au clic. -->
-      <div class="mt-5 flex items-center gap-2 overflow-x-auto pb-1 lg:hidden">
+      <div class="rangee-defilante mt-5 flex items-center gap-2 pb-1 lg:hidden">
         <button
           type="button"
           class="chip shrink-0"

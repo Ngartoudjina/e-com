@@ -5,7 +5,7 @@
 
     <main class="container-page pb-24">
       <!-- Accueil personnalisé -->
-      <header class="flex flex-wrap items-center justify-between gap-8 py-12">
+      <header class="flex flex-wrap items-center justify-between gap-6 py-8 lg:gap-8 lg:py-12">
         <div class="flex items-center gap-6">
           <span class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-rule-soft">
             <img v-if="utilisateur?.photoUrl" :src="utilisateur.photoUrl" alt="" class="size-full object-cover" />
@@ -18,18 +18,23 @@
           </div>
         </div>
 
-        <dl class="flex gap-10">
-          <div v-for="stat in statistiques" :key="stat.libelle">
+        <!--
+          Trois colonnes de largeur égale, et les valeurs alignées sur le bas
+          de la rangée. En `flex`, « Retouches offertes » se coupait en deux
+          lignes et poussait son chiffre plus bas que les deux autres.
+        -->
+        <dl class="grid w-full grid-cols-3 gap-4 lg:flex lg:w-auto lg:gap-10">
+          <div v-for="stat in statistiques" :key="stat.libelle" class="flex flex-col">
             <dt class="t-label text-ink-500">{{ stat.libelle }}</dt>
-            <dd data-numeric class="mt-2 font-display text-[28px] leading-none">{{ stat.valeur }}</dd>
+            <dd data-numeric class="mt-auto pt-2 font-display text-[28px] leading-none">{{ stat.valeur }}</dd>
           </div>
         </dl>
       </header>
 
-      <div class="grid-page border-t border-rule pt-10">
+      <div class="grid-page border-t border-rule pt-6 lg:pt-10">
         <!-- Navigation de l'espace : 3 colonnes -->
         <nav class="col-span-4 lg:col-span-3" aria-label="Espace client">
-          <ul class="flex gap-2 overflow-x-auto lg:block lg:space-y-1 lg:overflow-visible">
+          <ul class="rangee-defilante flex gap-2 lg:block lg:space-y-1 lg:overflow-visible">
             <li v-for="section in sections" :key="section.cle" class="shrink-0">
               <button
                 type="button"
@@ -51,7 +56,7 @@
           <RouterLink
             v-if="estAdmin"
             to="/admin"
-            class="mt-8 flex items-center gap-3 border border-ink-900 px-4 py-3 text-ink-900 transition-colors duration-[120ms] hover:bg-ink-900 hover:text-white"
+            class="mt-6 flex items-center gap-3 border border-ink-900 px-4 py-3 lg:mt-8 text-ink-900 transition-colors duration-[120ms] hover:bg-ink-900 hover:text-white"
           >
             <Shield class="size-4 shrink-0" />
             <span class="t-body">Administration</span>
@@ -67,7 +72,7 @@
         </nav>
 
         <!-- Contenu : 9 colonnes -->
-        <div class="col-span-4 mt-10 lg:col-span-9 lg:mt-0">
+        <div class="col-span-4 mt-8 lg:col-span-9 lg:mt-0">
           <!-- ---------------------------------------------- Commandes -->
           <section v-if="sectionActive === 'commandes'">
             <!-- Suivi de la commande en cours -->
@@ -91,7 +96,10 @@
               <button type="button" class="btn bg-paper text-ink-900 hover:bg-white">Suivre le colis</button>
             </div>
 
-            <div class="mt-10 flex flex-wrap items-center justify-between gap-4">
+            <!-- `first:mt-0` : sans commande en cours, ce bloc devient le
+                 premier de la section et sa marge s'ajoutait à celle du
+                 conteneur, creusant un vide de 64 px sous la navigation. -->
+            <div class="mt-8 flex flex-wrap items-center justify-between gap-4 first:mt-0 lg:mt-10 lg:first:mt-0">
               <h2 class="t-h2">Commandes</h2>
               <div class="flex flex-wrap gap-2">
                 <button

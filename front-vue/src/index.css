@@ -585,6 +585,22 @@
     }
   }
 
+  /* Rangée qui défile horizontalement — onglets, filtres, puces.
+     La barre de défilement y est masquée : sur ces rangées courtes elle
+     passe pour un trait de séparation mal placé, alors qu'elle reste utile
+     sur les tableaux de l'administration, où elle signale que la colonne
+     continue. Le défilement lui-même est inchangé. */
+  .rangee-defilante {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rangee-defilante::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Barre d'action ancrée : « sur les écrans qui vendent, la barre
      d'action reste ancrée en bas ». */
   .action-bar {

@@ -4,7 +4,7 @@
     <SiteHeader />
 
     <main class="container-page pb-24">
-      <div class="flex flex-wrap items-end justify-between gap-4 pt-12">
+      <div class="flex flex-wrap items-end justify-between gap-4 pt-8 lg:pt-12">
         <h1 class="t-screen-title">Votre panier</h1>
         <RouterLink to="/catalogue" class="t-body text-ink-500 transition-colors hover:text-ink-900">
           Continuer mes achats ›
@@ -20,23 +20,33 @@
         <RouterLink to="/catalogue" class="btn btn-lg btn-primary mt-8">Découvrir le catalogue</RouterLink>
       </div>
 
-      <div v-else class="mt-12 grid-page border-t border-rule pt-10">
+      <div v-else class="mt-6 grid-page border-t border-rule pt-6 lg:mt-12 lg:pt-10">
         <!-- Articles : 7 colonnes -->
         <div class="col-span-4 lg:col-span-7">
           <!-- Palier de livraison offerte -->
-          <div class="flex items-center gap-4 bg-[#E4EAFF] p-4">
-            <Truck class="size-5 shrink-0 text-action" />
-            <div class="min-w-0 flex-1">
-              <p class="t-body text-action">
-                {{ livraisonOfferte ? 'Livraison offerte — palier atteint' : `Plus que ${formatPrix(resteAvantFranco)} pour la livraison offerte` }}
+          <!--
+            La jauge occupe toute la largeur sous la ligne de texte. Placée
+            à côté, elle se retrouvait sous un libellé coupé en deux sur
+            mobile et passait pour un soulignement de lien. Le rapport des
+            montants disparaît une fois le palier atteint : il n'apprend
+            plus rien.
+          -->
+          <div class="bg-[#E4EAFF] p-4">
+            <div class="flex items-center gap-3">
+              <Truck class="size-5 shrink-0 text-action" />
+              <p class="t-body min-w-0 flex-1 text-action">
+                {{ livraisonOfferte ? 'Livraison offerte' : `Plus que ${formatPrix(resteAvantFranco)} pour la livraison offerte` }}
               </p>
-              <div class="mt-2 h-px bg-action/25">
-                <div class="h-px bg-action transition-all duration-[320ms]" :style="{ width: `${progressionFranco}%` }" />
-              </div>
+              <p v-if="!livraisonOfferte" data-numeric class="t-small shrink-0 text-action">
+                {{ formatPrix(sousTotal) }} / {{ formatPrix(SEUIL_FRANCO) }}
+              </p>
             </div>
-            <p data-numeric class="t-small shrink-0 text-action">
-              {{ formatPrix(sousTotal) }} / {{ formatPrix(SEUIL_FRANCO) }}
-            </p>
+
+            <!-- La jauge disparaît une fois le palier franchi : pleine, elle
+                 n'indique plus rien qu'un trait sous une bonne nouvelle. -->
+            <div v-if="!livraisonOfferte" class="mt-3 h-px bg-action/25">
+              <div class="h-px bg-action transition-all duration-[320ms]" :style="{ width: `${progressionFranco}%` }" />
+            </div>
           </div>
 
           <!-- En-têtes de colonnes -->
@@ -51,7 +61,7 @@
           <article
             v-for="article in articles"
             :key="ligneId(article)"
-            class="grid grid-cols-[96px_1fr] gap-4 border-b border-rule py-8 lg:grid-cols-[96px_1fr_auto_auto_auto] lg:items-start lg:gap-8"
+            class="grid grid-cols-[88px_1fr] gap-4 border-b border-rule py-6 sm:grid-cols-[96px_1fr] sm:py-8 lg:grid-cols-[96px_1fr_auto_auto_auto] lg:items-start lg:gap-8"
           >
             <RouterLink :to="`/produit/${article.id}`" class="block">
               <div class="aspect-[3/4] overflow-hidden bg-rule-soft">
@@ -65,7 +75,7 @@
             </RouterLink>
 
             <div class="min-w-0">
-              <h2 class="font-display text-[22px] leading-tight text-ink-900">
+              <h2 class="font-display text-[17px] leading-tight text-ink-900 sm:text-[22px]">
                 <RouterLink :to="`/produit/${article.id}`" class="hover:underline">{{ article.name }}</RouterLink>
               </h2>
               <p class="t-small mt-2 text-ink-500">
@@ -77,9 +87,9 @@
                 <span aria-hidden="true">●</span>{{ statut(article)!.libelle }}
               </p>
 
-              <div class="mt-4 flex flex-wrap gap-6">
+              <div class="mt-3 flex flex-wrap gap-4 sm:mt-4 sm:gap-6">
                 <button type="button" class="t-small text-ink-900 underline underline-offset-4 hover:text-ink-500">
-                  Déplacer vers les favoris
+                  Vers les favoris
                 </button>
                 <RouterLink :to="`/produit/${article.id}`" class="t-small text-ink-900 underline underline-offset-4 hover:text-ink-500">
                   Modifier la taille
@@ -87,7 +97,7 @@
               </div>
 
               <!-- Quantité et total, empilés sous le nom en mobile -->
-              <div class="mt-6 flex items-center justify-between gap-4 lg:hidden">
+              <div class="mt-4 flex items-center justify-between gap-4 sm:mt-6 lg:hidden">
                 <QuantityStepper
                   :quantite="article.quantity"
                   @modifier="(q) => cartStore.updateQuantity(article.id, q, article.selectedSize, article.selectedColor)"
@@ -129,7 +139,7 @@
         </div>
 
         <!-- Récapitulatif : 5 colonnes -->
-        <aside class="col-span-4 mt-10 lg:col-span-5 lg:mt-0">
+        <aside class="col-span-4 mt-8 lg:col-span-5 lg:mt-0">
           <div class="border border-rule bg-surface p-6 lg:p-8">
             <h2 class="t-label text-ink-500">Récapitulatif</h2>
 
