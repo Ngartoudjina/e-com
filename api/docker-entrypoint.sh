@@ -10,11 +10,22 @@ set -e
 # d'un autre environnement viserait la mauvaise base de données.
 # =====================================================================
 
+# L'hébergeur impose le port par $PORT et interroge celui-là. FrankenPHP,
+# lui, écoute ce que dit SERVER_NAME. Figé à 8080, le conteneur démarrait
+# correctement mais ne répondait jamais sur le port surveillé : construction
+# réussie, service déclaré défaillant.
+export SERVER_NAME=":${PORT:-8080}"
+echo "Écoute sur ${SERVER_NAME}"
+
 if [ -z "$APP_KEY" ]; then
     echo "APP_KEY est vide : les données chiffrées et les sessions seraient illisibles." >&2
     echo "Générer une clé avec « php artisan key:generate --show » et la déclarer." >&2
     exit 1
 fi
+
+# La découverte des paquets a été retirée de la construction : elle démarre
+# Laravel, qui n'a alors aucune variable d'environnement. Sa place est ici.
+php artisan package:discover --ansi
 
 php artisan config:cache
 php artisan route:cache

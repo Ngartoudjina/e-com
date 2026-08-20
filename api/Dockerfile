@@ -10,6 +10,11 @@
 
 FROM dunglas/frankenphp:1-php8.4 AS base
 
+# Composer n'est pas fourni par l'image FrankenPHP : sans cette copie, la
+# construction s'arrête sur « composer: not found ». Le binaire officiel
+# plutôt qu'une installation par script — sa version s'en trouve figée.
+COPY --from=composer/composer:2-bin /composer /usr/bin/composer
+
 # Composer ne réclame que ctype, dom, fileinfo, filter, hash, iconv, json,
 # libxml, mbstring, openssl, pcre, session et tokenizer — tous présents dans
 # l'image. Deux manquent pourtant à l'appel :
@@ -38,8 +43,10 @@ WORKDIR /app
 # ---------------------------------------------------------------------
 COPY composer.json composer.lock ./
 
-RUN --mount=type=cache,target=/root/.composer \
-    composer install \
+# Pas de `--mount=type=cache` : cette syntaxe exige BuildKit, et rien ne
+# garantit qu'il soit actif chez l'hébergeur. Le gain ne vaut pas le risque
+# de voir la construction échouer sur une directive non comprise.
+RUN composer install \
         --no-dev \
         --no-interaction \
         --no-progress \
@@ -51,15 +58,26 @@ COPY . .
 
 # `--no-scripts` plus haut évitait que les scripts tournent sans le code ;
 # ils sont lancés maintenant, une fois l'application complète.
-RUN composer dump-autoload --optimize --no-dev --classmap-authoritative \
-    && composer run-script post-autoload-dump
+# La découverte des paquets (`post-autoload-dump`) n'a pas lieu ici : elle
+# démarre Laravel, or aucune variable d'environnement n'est posée pendant la
+# construction. Elle est faite au lancement, par docker-entrypoint.sh.
+RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
 
 # Les caches de configuration et de routes ne sont PAS construits ici :
 # `config:cache` fige les variables d'environnement au moment de la
 # construction, or elles ne sont connues qu'au démarrage sur l'hébergeur.
 # Ils sont produits par docker-entrypoint.sh.
 
-RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
+# Chemins écrits un par un : `/bin/sh` sur Debian est dash, qui ne fait pas
+# l'expansion d'accolades. `{cache,sessions,views}` aurait produit un dossier
+# portant ce nom littéral, et Laravel aurait refusé de démarrer faute de
+# chemin de cache valide — sans que la construction, elle, échoue.
+RUN mkdir -p \
+        storage/framework/cache \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/logs \
+        bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 
 ENV SERVER_NAME=:8080 \
