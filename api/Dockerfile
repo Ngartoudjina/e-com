@@ -58,9 +58,12 @@ COPY . .
 
 # `--no-scripts` plus haut évitait que les scripts tournent sans le code ;
 # ils sont lancés maintenant, une fois l'application complète.
-# La découverte des paquets (`post-autoload-dump`) n'a pas lieu ici : elle
-# démarre Laravel, or aucune variable d'environnement n'est posée pendant la
-# construction. Elle est faite au lancement, par docker-entrypoint.sh.
+#
+# `dump-autoload` déclenche de lui-même `post-autoload-dump`, donc
+# `package:discover` s'exécute ici — le journal de construction le montre, et
+# il passe sans variables d'environnement. L'entrypoint le relance malgré
+# tout au démarrage : la découverte y voit la configuration réelle, et le
+# coût est de quelques dixièmes de seconde.
 RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
 
 # Les caches de configuration et de routes ne sont PAS construits ici :
