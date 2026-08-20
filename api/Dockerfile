@@ -32,8 +32,20 @@ RUN install-php-extensions \
         opcache \
         zip \
     && apt-get update \
-    && apt-get install -y --no-install-recommends git \
+    && apt-get install -y --no-install-recommends git libcap2-bin \
     && rm -rf /var/lib/apt/lists/*
+
+# Le binaire frankenphp porte une capacité fichier — cap_net_bind_service —
+# qui lui permet d'écouter sur 80 et 443. L'hébergeur exécute le conteneur
+# sans privilèges et avec `no-new-privs` : sous cette restriction, le noyau
+# refuse d'exécuter un fichier porteur de capacités et rend EPERM, c'est-à-dire
+# « exec: frankenphp: Operation not permitted », sans plus d'explication.
+#
+# On la retire. Elle ne sert à rien ici : le port est imposé par $PORT et vaut
+# 10000, bien au-dessus des ports réservés.
+RUN FRANKENPHP="$(command -v frankenphp)" \
+    && echo "Retrait des capacités de ${FRANKENPHP}" \
+    && setcap -r "${FRANKENPHP}"
 
 WORKDIR /app
 
